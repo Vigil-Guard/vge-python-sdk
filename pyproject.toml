@@ -1,0 +1,145 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vigil-guard"
+dynamic = ["version"]
+description = "Python SDK for Vigil Guard prompt injection detection"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Vigil Guard", email = "sdk@vigilguard.com" }
+]
+keywords = ["llm", "security", "prompt-injection", "ai-safety", "pii-detection"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+    "Framework :: AsyncIO",
+]
+dependencies = [
+    "httpx>=0.25.0,<1.0.0",
+    "pydantic>=2.0.0,<3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=1.5.0",
+    "ruff>=0.1.0",
+    "respx>=0.20.0",
+]
+release = [
+    "build>=1.0.0",
+    "twine>=4.0.0",
+    "pip-audit>=2.6.0",
+    "cyclonedx-bom>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://www.vigilguard.ai"
+Documentation = "https://www.vigilguard.ai"
+Repository = "https://github.com/Vigil-Guard/python-SDK-vge"
+Changelog = "https://github.com/Vigil-Guard/python-SDK-vge/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/Vigil-Guard/python-SDK-vge/issues"
+
+[tool.hatch.version]
+path = "src/vigil/_version.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/LICENSE",
+    "/README.md",
+    "/CHANGELOG.md",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vigil"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/vigil/py.typed" = "vigil/py.typed"
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "silent"
+ignore_missing_imports = false
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    # Disable pyupgrade rules that suggest Python 3.10+ syntax.
+    # We target Python 3.9+ and Pydantic evaluates type hints at runtime,
+    # so we must use Optional[X], List, Dict instead of X | None, list, dict.
+    "UP006",  # Use `type` instead of `Type` - Pydantic runtime needs typing.Type
+    "UP007",  # Use `X | Y` instead of `Union[X, Y]`
+    "UP035",  # `typing.X` is deprecated, use `x` instead
+    "UP045",  # Use `X | None` for type annotations
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["vigil"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests (run in all environments)",
+    "component: Component tests (run in all environments)",
+    "contract: Contract tests (run in all environments, require mocking)",
+    "integration: Integration tests (require local API instance)",
+    "performance: Performance benchmarks (require local API instance)",
+]
+
+[tool.coverage.run]
+source = ["src/vigil"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+fail_under = 85
