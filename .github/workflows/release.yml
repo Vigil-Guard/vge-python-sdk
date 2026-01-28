@@ -1,0 +1,79 @@
+name: Release to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,release]"
+
+      - name: Run tests
+        run: pytest -m "not integration and not performance" -v
+
+      - name: Run linters
+        run: |
+          mypy --strict src/vigil/
+          ruff check src/vigil/ tests/
+
+      - name: Audit dependencies
+        run: pip-audit
+
+      - name: Build package
+        run: python -m build
+
+      - name: Generate SBOM
+        run: cyclonedx-py environment -o sbom.json
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Sign distribution files
+        run: |
+          for file in dist/*; do
+            gpg --batch --yes --armor --detach-sign "$file"
+          done
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.whl
+            dist/*.asc
+            sbom.json
+          generate_release_notes: true
+          body: |
+            ## Installation
+            ```bash
+            pip install vigil-guard==${{ env.TAG_NAME }}
+            ```
+
+            ## Verification
+            GPG signatures (.asc files) and SBOM included in release assets.
