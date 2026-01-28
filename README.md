@@ -1,6 +1,6 @@
 # Vigil Guard Python SDK
 
-Official Python SDK for Vigil Guard prompt injection detection API.
+Official Python SDK for Vigil Guard prompt injection detection API (self-hosted deployments).
 
 [![PyPI version](https://badge.fury.io/py/vigil-guard.svg)](https://pypi.org/project/vigil-guard/)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
