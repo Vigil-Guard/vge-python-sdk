@@ -74,6 +74,38 @@ class LlmGuardBranch(BaseModel):
     timing_ms: Optional[int] = Field(default=None, alias="timingMs")
 
 
+class ContentModCategoryResult(BaseModel):
+    """Per-category content moderation classification."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    name: str = Field(alias="name")
+    score: float = Field(alias="score")
+    triggered: bool = Field(alias="triggered")
+
+
+class ContentModBranch(BaseModel):
+    """
+    Results from content moderation detection.
+
+    Includes per-category classifications and policy action metadata.
+    """
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    score: float = Field(alias="score")
+    confidence: float = Field(alias="confidence")
+    categories: List[ContentModCategoryResult] = Field(alias="categories")
+    triggered_categories: List[str] = Field(alias="triggeredCategories")
+    detected_language: str = Field(alias="detectedLanguage")
+    model_used: str = Field(alias="modelUsed")
+    suggested_action: str = Field(alias="suggestedAction")
+    action_applied: Optional[str] = Field(default=None, alias="actionApplied")
+    processing_time_ms: int = Field(alias="processingTimeMs")
+    error: Optional[str] = Field(default=None, alias="error")
+    error_detail: Optional[str] = Field(default=None, alias="errorDetail")
+
+
 class DetectionBranches(BaseModel):
     """
     Container for all detection branch results.
@@ -87,6 +119,7 @@ class DetectionBranches(BaseModel):
     semantic: Optional[SemanticBranch] = Field(default=None, alias="semantic")
     pii: Optional[PiiBranch] = Field(default=None, alias="pii")
     llm_guard: Optional[LlmGuardBranch] = Field(default=None, alias="llmGuard")
+    content_mod: Optional[ContentModBranch] = Field(default=None, alias="contentMod")
 
     @property
     def has_pii(self) -> bool:

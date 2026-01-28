@@ -17,7 +17,7 @@ from vigil import (
 )
 
 DEFAULT_API_KEY = "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-DEFAULT_BASE_URL = "https://api.vigilguard.com"
+DEFAULT_BASE_URL = "https://api.vigilguard.ai"
 
 
 def handle_all_errors():

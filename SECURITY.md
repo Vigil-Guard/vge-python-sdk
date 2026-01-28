@@ -17,7 +17,7 @@ We take security vulnerabilities seriously. If you discover a security issue in 
 
 Instead, please report security vulnerabilities by emailing:
 
-**security@vigilguard.com**
+**security@vigilguard.ai**
 
 ### What to Include
 
