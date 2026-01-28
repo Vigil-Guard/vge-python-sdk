@@ -103,7 +103,7 @@ class TestDetectionResponseContract:
                         "llmGuard": {
                             "score": 80,
                             "verdict": "BLOCK",
-                            "modelUsed": "vigil-llm-guard",
+                            "modelUsed": "llm-safety-v2",
                         },
                         "contentMod": {
                             "score": 55,
@@ -114,7 +114,7 @@ class TestDetectionResponseContract:
                             ],
                             "triggeredCategories": ["HATE_SPEECH"],
                             "detectedLanguage": "en",
-                            "modelUsed": "content_mod_en",
+                            "modelUsed": "content-safety-en-v1",
                             "suggestedAction": "LOG",
                             "actionApplied": "LOG",
                             "processingTimeMs": 45,

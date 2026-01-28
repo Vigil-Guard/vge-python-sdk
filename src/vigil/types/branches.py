@@ -61,9 +61,9 @@ class PiiBranch(BaseModel):
 
 class LlmGuardBranch(BaseModel):
     """
-    Results from LLM-based guard detection.
+    Results from injection signal classification.
 
-    Uses a language model to analyze potential prompt injections.
+    Uses a classifier model to analyze potential prompt injections.
     """
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)

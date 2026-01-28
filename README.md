@@ -225,7 +225,7 @@ result.raise_for_failures()  # Raises VigilBatchPartialFailure
 | `heuristics` | HeuristicsBranch | Heuristic explanations and threat level |
 | `semantic`   | SemanticBranch   | Attack/safe similarity scores           |
 | `pii`        | PiiBranch        | PII detection categories and counts     |
-| `llm_guard`  | LlmGuardBranch   | LLM guard score and verdict             |
+| `llm_guard`  | LlmGuardBranch   | Injection Signal Classifier score/verdict |
 | `content_mod` | ContentModBranch | Content moderation categories and action |
 | `has_pii`    | bool             | True if PII detected                    |
 

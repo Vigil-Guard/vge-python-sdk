@@ -112,11 +112,11 @@ class TestLlmGuardBranch:
     """Tests for LlmGuardBranch model."""
 
     def test_parse_full(self) -> None:
-        data = {"score": 80, "verdict": "SAFE", "modelUsed": "deberta-v3-small-prompt-injection-v2"}
+        data = {"score": 80, "verdict": "SAFE", "modelUsed": "llm-safety-v2"}
         branch = LlmGuardBranch.model_validate(data)
         assert branch.score == 80
         assert branch.verdict == "SAFE"
-        assert branch.model_used == "deberta-v3-small-prompt-injection-v2"
+        assert branch.model_used == "llm-safety-v2"
 
 
 @pytest.mark.unit
@@ -131,7 +131,7 @@ class TestDetectionBranches:
             "llmGuard": {
                 "score": 10,
                 "verdict": "SAFE",
-                "modelUsed": "deberta-v3-small-prompt-injection-v2",
+                "modelUsed": "llm-safety-v2",
             },
         }
         branches = DetectionBranches.model_validate(data)

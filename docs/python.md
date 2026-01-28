@@ -356,7 +356,7 @@ for item in items:
 | `heuristics` | `Optional[HeuristicsBranch]` | Pattern matching results     |
 | `semantic`   | `Optional[SemanticBranch]`   | Embedding similarity results |
 | `pii`        | `Optional[PiiBranch]`        | PII detection results        |
-| `llm_guard`  | `Optional[LlmGuardBranch]`   | LLM-based detection results  |
+| `llm_guard`  | `Optional[LlmGuardBranch]`   | Injection Signal Classifier results |
 | `content_mod` | `Optional[ContentModBranch]` | Content moderation results   |
 | `has_pii`    | `bool`                       | `True` if PII detected       |
 
@@ -402,8 +402,8 @@ for item in items:
 | Property     | Type            | Description      |
 | ------------ | --------------- | ---------------- |
 | `score`      | `float`         | Branch score     |
-| `verdict`    | `str`           | Model verdict    |
-| `model_used` | `str`           | Model identifier |
+| `verdict`    | `str`           | Classifier verdict |
+| `model_used` | `str`           | Model identifier   |
 | `timing_ms`  | `Optional[int]` | Processing time  |
 
 ---
