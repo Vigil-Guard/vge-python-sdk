@@ -54,7 +54,7 @@ def _resolve_base_url(base_url: Optional[str]) -> str:
     """
     Resolve base_url from parameter or environment.
 
-    Falls back to the public API base URL when not provided.
+    Falls back to the self-hosted base URL when not provided.
     """
     url = base_url or os.environ.get("VIGIL_GUARD_BASE_URL") or DEFAULT_BASE_URL
     parsed = urlparse(url)
@@ -101,7 +101,7 @@ class ClientConfig:
 
     Attributes:
         api_key: API key for authentication (required)
-        base_url: Base URL of the API (defaults to public API base URL)
+        base_url: Base URL of the API (defaults to self-hosted base URL)
         timeout: Total request timeout in seconds
         connect_timeout: Connection timeout in seconds
         read_timeout: Read timeout in seconds
