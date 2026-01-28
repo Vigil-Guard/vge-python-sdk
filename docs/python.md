@@ -339,6 +339,8 @@ for item in items:
 | `decision_reason` | `Optional[str]`          | Human-readable decision reason         |
 | `language_info`   | `Optional[LanguageInfo]` | Detected language metadata             |
 
+**Note:** SDK field names match the API schema. Descriptions below use user-facing terminology only; JSON field names (e.g. `llmGuard`, `modelUsed`) are unchanged and passed through as-is.
+
 **Convenience Properties:**
 
 - `is_safe` - `True` if decision is `ALLOWED`
@@ -403,7 +405,7 @@ for item in items:
 | ------------ | --------------- | ---------------- |
 | `score`      | `float`         | Branch score     |
 | `verdict`    | `str`           | Classifier verdict |
-| `model_used` | `str`           | Model identifier   |
+| `model_used` | `str`           | Model identifier (backend-defined) |
 | `timing_ms`  | `Optional[int]` | Processing time  |
 
 ---
@@ -417,7 +419,7 @@ for item in items:
 | `categories`          | `List[ContentModCategoryResult]` | Per-category classification            |
 | `triggered_categories`| `List[str]`                     | Triggered category names               |
 | `detected_language`   | `str`                           | Detected language                      |
-| `model_used`          | `str`                           | Model identifier                       |
+| `model_used`          | `str`                           | Model identifier (backend-defined)     |
 | `suggested_action`    | `str`                           | Suggested action (ALLOW/BLOCK/LOG)     |
 | `action_applied`      | `Optional[str]`                 | Applied action, if any                 |
 | `processing_time_ms`  | `int`                           | Processing time (ms)                   |

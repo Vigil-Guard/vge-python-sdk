@@ -199,6 +199,8 @@ result.raise_for_failures()  # Raises VigilBatchPartialFailure
 
 ## Response Objects
 
+**Note:** SDK field names match the API schema. The descriptions below use user-facing terminology only; the JSON field names (e.g. `llmGuard`, `modelUsed`) are unchanged and passed through as-is. `modelUsed` values are backend-defined identifiers.
+
 ### DetectionResult
 
 | Property         | Type              | Description                              |
@@ -225,7 +227,7 @@ result.raise_for_failures()  # Raises VigilBatchPartialFailure
 | `heuristics` | HeuristicsBranch | Heuristic explanations and threat level |
 | `semantic`   | SemanticBranch   | Attack/safe similarity scores           |
 | `pii`        | PiiBranch        | PII detection categories and counts     |
-| `llm_guard`  | LlmGuardBranch   | Injection Signal Classifier score/verdict |
+| `llm_guard`  | LlmGuardBranch   | Injection Signal Classifier score/verdict (API field: `llmGuard`) |
 | `content_mod` | ContentModBranch | Content moderation categories and action |
 | `has_pii`    | bool             | True if PII detected                    |
 
