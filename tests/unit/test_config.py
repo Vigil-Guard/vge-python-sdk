@@ -32,7 +32,7 @@ class TestClientConfig:
     def test_custom_values(self) -> None:
         config = ClientConfig(
             api_key="vg_live_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            base_url="https://api.vigilguard.acme.com",
+            base_url="https://api.vigilguard.customer.domain",
             timeout=60.0,
             connect_timeout=10.0,
             max_retries=5,
@@ -125,7 +125,7 @@ class TestClientConfigFromParams:
         }
         with mock.patch.dict(os.environ, env, clear=True):
             config = ClientConfig.from_params()
-            assert config.base_url == "https://api.vigilguard.ai"
+            assert config.base_url == "https://api.vigilguard.customer.domain"
 
     def test_from_params_missing_api_key_raises(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):

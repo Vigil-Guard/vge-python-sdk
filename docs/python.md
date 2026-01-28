@@ -36,7 +36,7 @@ from vigil import Vigil
 
 client = Vigil(
     api_key="vg_live_...",
-    base_url="https://api.vigilguard.acme.com",
+    base_url="https://api.vigilguard.customer.domain",
 )
 
 result = client.detect(
@@ -62,7 +62,7 @@ else:
 | Parameter                   | Type    | Default                      | Description                                      |
 | --------------------------- | ------- | ---------------------------- | ------------------------------------------------ |
 | `api_key`                   | `str`   | -                            | API key (required, or set `VIGIL_GUARD_API_KEY`) |
-| `base_url`                  | `str`   | `https://api.vigilguard.ai` | API base URL                                     |
+| `base_url`                  | `str`   | `https://api.vigilguard.customer.domain` | Self-hosted API base URL                         |
 | `timeout`                   | `float` | `30.0`                       | Request timeout (seconds)                        |
 | `connect_timeout`           | `float` | `5.0`                        | Connection timeout (seconds)                     |
 | `read_timeout`              | `float` | `None`                       | Read timeout (seconds)                           |
@@ -107,7 +107,7 @@ the server).
 ```python
 client = Vigil(
     api_key="vg_live_...",
-    base_url="https://api.vigilguard",
+    base_url="https://api.vigilguard.customer.domain",
     ca_bundle="infra/traefik/certs/vigilguard.crt",
 )
 ```
@@ -625,7 +625,7 @@ from vigil import AsyncVigil
 
 async with AsyncVigil(
     api_key="vg_live_...",
-    base_url="https://api.vigilguard.acme.com"
+    base_url="https://api.vigilguard.customer.domain"
 ) as client:
     result = await client.detect("Please reset my password for account 18473")
 
@@ -656,7 +656,7 @@ async def analyze_many(texts: list[str]) -> list:
 ```python
 client = Vigil(
     api_key="vg_live_...",
-    base_url="https://api.vigilguard.acme.com",
+    base_url="https://api.vigilguard.customer.domain",
     client_cert="/path/to/client.crt",
     client_key="/path/to/client.key",
 )

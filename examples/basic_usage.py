@@ -7,7 +7,7 @@ from vigil import Decision, Vigil
 # Initialize client (uses env vars or pass directly)
 client = Vigil(
     api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-    base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.ai"),
+    base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.customer.domain"),
 )
 
 

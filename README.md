@@ -18,7 +18,7 @@ pip install vigil-guard
 ```python
 from vigil import Vigil
 
-# Initialize client (uses https://api.vigilguard.ai by default)
+# Initialize client (set your self-hosted base_url)
 client = Vigil(api_key="vg_live_...")
 
 # Detect prompt injection
@@ -64,7 +64,7 @@ async with AsyncVigil(api_key="vg_live_...") as client:
 
 | Parameter                   | Default                      | Description                                          |
 | --------------------------- | ---------------------------- | ---------------------------------------------------- |
-| `base_url`                  | `https://api.vigilguard.ai` | API base URL (or set `VIGIL_GUARD_BASE_URL` env var) |
+| `base_url`                  | `https://api.vigilguard.customer.domain` | Self-hosted API base URL (or set `VIGIL_GUARD_BASE_URL`) |
 | `timeout`                   | 30.0                         | Request timeout in seconds                           |
 | `connect_timeout`           | 5.0                          | Connection timeout in seconds                        |
 | `read_timeout`              | None                         | Read timeout in seconds                              |
@@ -94,7 +94,7 @@ the server).
 ```python
 client = Vigil(
     api_key="vg_live_...",
-    base_url="https://api.vigilguard",
+    base_url="https://api.vigilguard.customer.domain",
     timeout=60.0,
     proxy="http://proxy.corp.com:8080",
     ca_bundle="infra/traefik/certs/vigilguard.crt",
