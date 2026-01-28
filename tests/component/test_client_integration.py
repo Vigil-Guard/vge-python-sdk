@@ -83,7 +83,7 @@ class TestFullDetectionFlow:
                         "llmGuard": {
                             "score": 60,
                             "verdict": "BLOCK",
-                            "modelUsed": "vigil-llm-guard",
+                            "modelUsed": "llm-safety-v2",
                         },
                         "contentMod": {
                             "score": 40,
@@ -93,7 +93,7 @@ class TestFullDetectionFlow:
                             ],
                             "triggeredCategories": ["HARASSMENT"],
                             "detectedLanguage": "en",
-                            "modelUsed": "content_mod_en",
+                            "modelUsed": "content-safety-en-v1",
                             "suggestedAction": "LOG",
                             "processingTimeMs": 30,
                         },
