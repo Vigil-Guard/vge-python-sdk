@@ -57,7 +57,7 @@ class TestVigilClientInit:
         monkeypatch.delenv("VIGIL_GUARD_BASE_URL", raising=False)
 
         client = Vigil(api_key=DUMMY_API_KEY)
-        assert client._config.base_url == "https://api.vigilguard.com"
+        assert client._config.base_url == "https://api.vigilguard.ai"
 
     def test_invalid_api_key_format_raises(self) -> None:
         """Invalid API key format raises configuration error."""

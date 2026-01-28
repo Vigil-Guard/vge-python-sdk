@@ -18,7 +18,7 @@ pip install vigil-guard
 ```python
 from vigil import Vigil
 
-# Initialize client (uses https://api.vigilguard.com by default)
+# Initialize client (uses https://api.vigilguard.ai by default)
 client = Vigil(api_key="vg_live_...")
 
 # Detect prompt injection
@@ -64,7 +64,7 @@ async with AsyncVigil(api_key="vg_live_...") as client:
 
 | Parameter                   | Default                      | Description                                          |
 | --------------------------- | ---------------------------- | ---------------------------------------------------- |
-| `base_url`                  | `https://api.vigilguard.com` | API base URL (or set `VIGIL_GUARD_BASE_URL` env var) |
+| `base_url`                  | `https://api.vigilguard.ai` | API base URL (or set `VIGIL_GUARD_BASE_URL` env var) |
 | `timeout`                   | 30.0                         | Request timeout in seconds                           |
 | `connect_timeout`           | 5.0                          | Connection timeout in seconds                        |
 | `read_timeout`              | None                         | Read timeout in seconds                              |
@@ -226,6 +226,7 @@ result.raise_for_failures()  # Raises VigilBatchPartialFailure
 | `semantic`   | SemanticBranch   | Attack/safe similarity scores           |
 | `pii`        | PiiBranch        | PII detection categories and counts     |
 | `llm_guard`  | LlmGuardBranch   | LLM guard score and verdict             |
+| `content_mod` | ContentModBranch | Content moderation categories and action |
 | `has_pii`    | bool             | True if PII detected                    |
 
 ## Error Handling

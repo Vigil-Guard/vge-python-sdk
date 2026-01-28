@@ -62,7 +62,7 @@ else:
 | Parameter                   | Type    | Default                      | Description                                      |
 | --------------------------- | ------- | ---------------------------- | ------------------------------------------------ |
 | `api_key`                   | `str`   | -                            | API key (required, or set `VIGIL_GUARD_API_KEY`) |
-| `base_url`                  | `str`   | `https://api.vigilguard.com` | API base URL                                     |
+| `base_url`                  | `str`   | `https://api.vigilguard.ai` | API base URL                                     |
 | `timeout`                   | `float` | `30.0`                       | Request timeout (seconds)                        |
 | `connect_timeout`           | `float` | `5.0`                        | Connection timeout (seconds)                     |
 | `read_timeout`              | `float` | `None`                       | Read timeout (seconds)                           |
@@ -122,6 +122,8 @@ server cert/key).
 vg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # Production
 vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # Test/Sandbox
 ```
+
+Suffix uses base64url characters (`A-Z`, `a-z`, `0-9`, `_`, `-`).
 
 ---
 
@@ -355,6 +357,7 @@ for item in items:
 | `semantic`   | `Optional[SemanticBranch]`   | Embedding similarity results |
 | `pii`        | `Optional[PiiBranch]`        | PII detection results        |
 | `llm_guard`  | `Optional[LlmGuardBranch]`   | LLM-based detection results  |
+| `content_mod` | `Optional[ContentModBranch]` | Content moderation results   |
 | `has_pii`    | `bool`                       | `True` if PII detected       |
 
 ---
@@ -402,6 +405,32 @@ for item in items:
 | `verdict`    | `str`           | Model verdict    |
 | `model_used` | `str`           | Model identifier |
 | `timing_ms`  | `Optional[int]` | Processing time  |
+
+---
+
+### ContentModBranch
+
+| Property              | Type                            | Description                            |
+| --------------------- | ------------------------------- | -------------------------------------- |
+| `score`               | `float`                         | Branch score                           |
+| `confidence`          | `float`                         | Model confidence                       |
+| `categories`          | `List[ContentModCategoryResult]` | Per-category classification            |
+| `triggered_categories`| `List[str]`                     | Triggered category names               |
+| `detected_language`   | `str`                           | Detected language                      |
+| `model_used`          | `str`                           | Model identifier                       |
+| `suggested_action`    | `str`                           | Suggested action (ALLOW/BLOCK/LOG)     |
+| `action_applied`      | `Optional[str]`                 | Applied action, if any                 |
+| `processing_time_ms`  | `int`                           | Processing time (ms)                   |
+| `error`               | `Optional[str]`                 | Error code, if any                     |
+| `error_detail`        | `Optional[str]`                 | Error details                          |
+
+### ContentModCategoryResult
+
+| Property   | Type    | Description                  |
+| ---------- | ------- | ---------------------------- |
+| `name`     | `str`   | Category name                |
+| `score`    | `float` | Category score               |
+| `triggered` | `bool`  | Category triggered flag      |
 
 ---
 

@@ -105,6 +105,20 @@ class TestDetectionResponseContract:
                             "verdict": "BLOCK",
                             "modelUsed": "vigil-llm-guard",
                         },
+                        "contentMod": {
+                            "score": 55,
+                            "confidence": 0.7,
+                            "categories": [
+                                {"name": "HATE_SPEECH", "score": 0.8, "triggered": True},
+                                {"name": "SELF_HARM", "score": 0.1, "triggered": False},
+                            ],
+                            "triggeredCategories": ["HATE_SPEECH"],
+                            "detectedLanguage": "en",
+                            "modelUsed": "content_mod_en",
+                            "suggestedAction": "LOG",
+                            "actionApplied": "LOG",
+                            "processingTimeMs": 45,
+                        },
                     },
                     latencyMs=150,
                 ),
@@ -136,6 +150,10 @@ class TestDetectionResponseContract:
 
         assert result.branches.llm_guard is not None
         assert result.branches.llm_guard.verdict == "BLOCK"
+
+        assert result.branches.content_mod is not None
+        assert result.branches.content_mod.suggested_action == "LOG"
+        assert result.branches.content_mod.triggered_categories == ["HATE_SPEECH"]
 
     def test_all_decision_values(self, respx_mock: respx.MockRouter) -> None:
         """All possible decision enum values are parseable."""

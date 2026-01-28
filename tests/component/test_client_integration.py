@@ -85,6 +85,18 @@ class TestFullDetectionFlow:
                             "verdict": "BLOCK",
                             "modelUsed": "vigil-llm-guard",
                         },
+                        "contentMod": {
+                            "score": 40,
+                            "confidence": 0.4,
+                            "categories": [
+                                {"name": "HARASSMENT", "score": 0.6, "triggered": True},
+                            ],
+                            "triggeredCategories": ["HARASSMENT"],
+                            "detectedLanguage": "en",
+                            "modelUsed": "content_mod_en",
+                            "suggestedAction": "LOG",
+                            "processingTimeMs": 30,
+                        },
                     },
                     latencyMs=150,
                 ),
@@ -113,6 +125,9 @@ class TestFullDetectionFlow:
 
         assert result.branches.llm_guard is not None
         assert result.branches.llm_guard.verdict == "BLOCK"
+
+        assert result.branches.content_mod is not None
+        assert result.branches.content_mod.triggered_categories == ["HARASSMENT"]
 
     def test_detect_sanitized_response(self, respx_mock: respx.MockRouter) -> None:
         """Sanitized response includes sanitized text."""

@@ -7,6 +7,7 @@ TLS/mTLS support, proxy configuration, and idempotency keys.
 
 from __future__ import annotations
 
+import inspect
 import uuid
 from typing import Any, Dict, Optional, Tuple, Union
 from urllib.parse import urlsplit, urlunsplit
@@ -82,8 +83,8 @@ class HttpTransport:
             limits=limits,
             verify=verify,
             cert=cert,
-            proxy=self._get_proxy(),
             headers=self._build_default_headers(),
+            **self._build_proxy_kwargs(),
         )
 
     def _build_default_headers(self) -> Dict[str, str]:
@@ -111,6 +112,21 @@ class HttpTransport:
         netloc = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
         auth_netloc = f"{username}:{password}@{netloc}"
         return urlunsplit((parsed.scheme, auth_netloc, parsed.path, parsed.query, parsed.fragment))
+
+    def _build_proxy_kwargs(self) -> Dict[str, Any]:
+        """Build proxy kwargs compatible with httpx 0.25+ and 0.28+."""
+        proxy = self._get_proxy()
+        if not proxy:
+            return {}
+        try:
+            params = inspect.signature(httpx.Client).parameters
+            if "proxy" in params:
+                return {"proxy": proxy}
+            if "proxies" in params:
+                return {"proxies": proxy}
+        except (TypeError, ValueError):
+            pass
+        return {"proxy": proxy}
 
     def request(
         self,

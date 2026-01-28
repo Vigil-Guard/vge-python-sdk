@@ -125,7 +125,7 @@ class TestClientConfigFromParams:
         }
         with mock.patch.dict(os.environ, env, clear=True):
             config = ClientConfig.from_params()
-            assert config.base_url == "https://api.vigilguard.com"
+            assert config.base_url == "https://api.vigilguard.ai"
 
     def test_from_params_missing_api_key_raises(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -262,6 +262,14 @@ class TestApiKeyValidation:
             base_url="https://api.vigilguard.test.local",
         )
         assert config.api_key == f"vg_test_{long_suffix}"
+
+    def test_valid_base64url_key(self) -> None:
+        base64url_suffix = "abCD12_-abCD12_-abCD12_-abCD12_-"
+        config = ClientConfig.from_params(
+            api_key=f"vg_test_{base64url_suffix}",
+            base_url="https://api.vigilguard.test.local",
+        )
+        assert config.api_key == f"vg_test_{base64url_suffix}"
 
     def test_invalid_prefix(self) -> None:
         with pytest.raises(VigilConfigurationError):

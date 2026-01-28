@@ -10,7 +10,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 authors = [
-    { name = "Vigil Guard", email = "sdk@vigilguard.com" }
+    { name = "Vigil Guard", email = "sdk@vigilguard.ai" }
 ]
 keywords = ["llm", "security", "prompt-injection", "ai-safety", "pii-detection"]
 classifiers = [
