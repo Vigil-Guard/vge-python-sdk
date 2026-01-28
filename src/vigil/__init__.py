@@ -18,7 +18,7 @@ Async Usage:
 Enterprise Configuration:
     >>> client = Vigil(
     ...     api_key="vg_live_...",
-    ...     base_url="https://api.vigilguard",
+    ...     base_url="https://api.vigilguard.customer.domain",
     ...     timeout=30.0,
     ...     proxy="http://proxy.corp.com:8080",
     ...     ca_bundle="infra/traefik/certs/vigilguard.crt",

@@ -10,7 +10,7 @@ async def basic_async():
     """Basic async detection."""
     async with AsyncVigil(
         api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-        base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.ai"),
+        base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.customer.domain"),
     ) as client:
         result = await client.detect("Please reset my password for account 18473")
         print(f"Decision: {result.decision}")
@@ -21,7 +21,7 @@ async def concurrent_detection():
     """Process multiple texts concurrently."""
     async with AsyncVigil(
         api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-        base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.ai"),
+        base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.customer.domain"),
     ) as client:
         texts = [
             "Please reset my password",
@@ -44,7 +44,7 @@ async def async_batch():
     """Process batch of texts."""
     async with AsyncVigil(
         api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-        base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.ai"),
+        base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.customer.domain"),
     ) as client:
         items = [
             BatchItem(text="Please reset my password", metadata={"ticket_id": "t_1024"}),
@@ -67,7 +67,7 @@ async def output_detection():
     """Detect issues in LLM output."""
     async with AsyncVigil(
         api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-        base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.ai"),
+        base_url=os.environ.get("VIGIL_GUARD_BASE_URL", "https://api.vigilguard.customer.domain"),
     ) as client:
         llm_response = "Here are the customer emails: alice@example.com, bob@example.com"
         original_prompt = "Please list the customer emails"

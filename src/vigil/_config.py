@@ -17,7 +17,7 @@ from ._errors import VigilConfigurationError
 
 # API key format regex (base64url-compatible suffix)
 API_KEY_PATTERN = re.compile(r"^vg_(live|test)_[a-zA-Z0-9_-]{32,}$")
-DEFAULT_BASE_URL = "https://api.vigilguard.ai"
+DEFAULT_BASE_URL = "https://api.vigilguard.customer.domain"
 
 
 def _get_env_float(name: str, default: float) -> float:
@@ -60,7 +60,7 @@ def _resolve_base_url(base_url: Optional[str]) -> str:
     parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc:
         raise VigilConfigurationError(
-            "Invalid base_url. Expected a full URL like https://api.vigilguard.ai"
+            "Invalid base_url. Expected a full URL like https://api.vigilguard.customer.domain"
         )
     return url.rstrip("/")
 
@@ -187,7 +187,7 @@ class ClientConfig:
 
         Environment Variables:
             VIGIL_GUARD_API_KEY: API key
-            VIGIL_GUARD_BASE_URL: Base URL (default: https://api.vigilguard.ai)
+            VIGIL_GUARD_BASE_URL: Base URL (default: https://api.vigilguard.customer.domain)
             VIGIL_GUARD_TIMEOUT: Total timeout
             VIGIL_GUARD_CONNECT_TIMEOUT: Connection timeout
             VIGIL_GUARD_MAX_RETRIES: Maximum retries
