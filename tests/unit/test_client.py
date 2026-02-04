@@ -6,7 +6,15 @@ import pytest
 import respx
 from httpx import Response
 
-from vigil import BatchItem, Decision, Source, Vigil, VigilConfigurationError
+from vigil import (
+    BatchItem,
+    Decision,
+    Source,
+    Vigil,
+    VigilConfigurationError,
+    VigilLicenseExpiredError,
+    VigilLicenseRequiredError,
+)
 
 DUMMY_BASE_URL = "https://api.vigilguard.test.local"
 DUMMY_API_KEY = "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -382,3 +390,156 @@ class TestVigilContextManager:
         client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
         client.close()
         assert client._transport._client is None
+
+
+class TestVigilGetLicenseStatus:
+    """Tests for get_license_status() method."""
+
+    def test_get_license_status_active(self, respx_mock: respx.MockRouter, client: Vigil) -> None:
+        """Get license status returns active license."""
+        respx_mock.get(f"{DUMMY_BASE_URL}/v1/license/status").mock(
+            return_value=Response(
+                200,
+                json={
+                    "status": "ACTIVE",
+                    "type": "ENTERPRISE",
+                    "expiresAt": "2025-12-31T23:59:59Z",
+                    "daysRemaining": 365,
+                    "isBuiltIn": False,
+                },
+            )
+        )
+
+        result = client.get_license_status()
+        assert result.status == "ACTIVE"
+        assert result.type == "ENTERPRISE"
+        assert result.is_active is True
+        assert result.is_expired is False
+        assert result.days_remaining == 365
+
+    def test_get_license_status_trial(self, respx_mock: respx.MockRouter, client: Vigil) -> None:
+        """Get license status returns trial license."""
+        respx_mock.get(f"{DUMMY_BASE_URL}/v1/license/status").mock(
+            return_value=Response(
+                200,
+                json={
+                    "status": "TRIAL",
+                    "type": "TRIAL",
+                    "expiresAt": "2024-02-15T23:59:59Z",
+                    "daysRemaining": 14,
+                    "isBuiltIn": True,
+                },
+            )
+        )
+
+        result = client.get_license_status()
+        assert result.status == "TRIAL"
+        assert result.is_active is True
+        assert result.is_built_in is True
+
+    def test_get_license_status_expired(self, respx_mock: respx.MockRouter, client: Vigil) -> None:
+        """Get license status returns expired license."""
+        respx_mock.get(f"{DUMMY_BASE_URL}/v1/license/status").mock(
+            return_value=Response(
+                200,
+                json={
+                    "status": "EXPIRED",
+                    "type": "PROFESSIONAL",
+                    "expiresAt": "2024-01-01T00:00:00Z",
+                    "daysRemaining": None,
+                    "isBuiltIn": False,
+                },
+            )
+        )
+
+        result = client.get_license_status()
+        assert result.status == "EXPIRED"
+        assert result.is_expired is True
+        assert result.is_active is False
+
+    def test_get_license_status_expiring_soon(
+        self, respx_mock: respx.MockRouter, client: Vigil
+    ) -> None:
+        """Get license status detects expiring soon."""
+        respx_mock.get(f"{DUMMY_BASE_URL}/v1/license/status").mock(
+            return_value=Response(
+                200,
+                json={
+                    "status": "ACTIVE",
+                    "type": "PROFESSIONAL",
+                    "expiresAt": "2024-02-10T23:59:59Z",
+                    "daysRemaining": 25,
+                    "isBuiltIn": False,
+                },
+            )
+        )
+
+        result = client.get_license_status()
+        assert result.is_expiring_soon is True
+
+    def test_get_license_status_perpetual(
+        self, respx_mock: respx.MockRouter, client: Vigil
+    ) -> None:
+        """Get license status handles perpetual license (no expiration)."""
+        respx_mock.get(f"{DUMMY_BASE_URL}/v1/license/status").mock(
+            return_value=Response(
+                200,
+                json={
+                    "status": "ACTIVE",
+                    "type": "ENTERPRISE_PERPETUAL",
+                    "expiresAt": None,
+                    "daysRemaining": None,
+                    "isBuiltIn": False,
+                },
+            )
+        )
+
+        result = client.get_license_status()
+        assert result.status == "ACTIVE"
+        assert result.expires_at is None
+        assert result.is_expiring_soon is False
+
+
+class TestVigilLicenseErrors:
+    """Tests for license error handling."""
+
+    def test_detect_raises_license_expired_error(
+        self, respx_mock: respx.MockRouter, client: Vigil
+    ) -> None:
+        """Detect raises VigilLicenseExpiredError on LICENSE_EXPIRED."""
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(
+                403,
+                json={
+                    "error": "LICENSE_EXPIRED",
+                    "message": "Your license has expired. Please renew to continue.",
+                    "requestId": "req_license_1",
+                },
+            )
+        )
+
+        with pytest.raises(VigilLicenseExpiredError) as exc_info:
+            client.detect("Test input")
+
+        assert exc_info.value.error_code == "LICENSE_EXPIRED"
+        assert exc_info.value.request_id == "req_license_1"
+
+    def test_detect_raises_license_required_error(
+        self, respx_mock: respx.MockRouter, client: Vigil
+    ) -> None:
+        """Detect raises VigilLicenseRequiredError on LICENSE_REQUIRED."""
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(
+                403,
+                json={
+                    "error": "LICENSE_REQUIRED",
+                    "message": "A valid license is required to access this service.",
+                    "requestId": "req_license_2",
+                },
+            )
+        )
+
+        with pytest.raises(VigilLicenseRequiredError) as exc_info:
+            client.detect("Test input")
+
+        assert exc_info.value.error_code == "LICENSE_REQUIRED"
