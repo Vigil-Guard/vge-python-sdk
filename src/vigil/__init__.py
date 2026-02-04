@@ -39,6 +39,9 @@ from ._errors import (
     VigilConfigurationError,
     VigilConnectionError,
     VigilError,
+    VigilLicenseError,
+    VigilLicenseExpiredError,
+    VigilLicenseRequiredError,
     VigilRateLimitError,
     VigilRetryBudgetExceeded,
     VigilServiceError,
@@ -48,7 +51,7 @@ from ._errors import (
 from ._version import __version__
 from .types import Decision, Source, ThreatLevel
 from .types.requests import BatchItem
-from .types.responses import BatchResult, DetectionResult
+from .types.responses import BatchResult, DetectionResult, LicenseStatus
 
 __all__ = [
     # Version
@@ -62,6 +65,9 @@ __all__ = [
     "VigilError",
     "VigilConfigurationError",
     "VigilAuthenticationError",
+    "VigilLicenseError",
+    "VigilLicenseExpiredError",
+    "VigilLicenseRequiredError",
     "VigilRateLimitError",
     "VigilValidationError",
     "VigilAPIError",
@@ -78,4 +84,5 @@ __all__ = [
     "BatchItem",
     "DetectionResult",
     "BatchResult",
+    "LicenseStatus",
 ]

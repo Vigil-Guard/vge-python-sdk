@@ -19,7 +19,7 @@ from .types.requests import (
     GuardInputPayload,
     GuardOutputPayload,
 )
-from .types.responses import BatchResult, DetectionResult
+from .types.responses import BatchResult, DetectionResult, LicenseStatus
 
 
 class Vigil:
@@ -178,6 +178,20 @@ class Vigil:
 
         self._validate_response(BatchResult, response)
         return BatchResult.model_validate(response)
+
+    def get_license_status(
+        self,
+        *,
+        timeout: Optional[float] = None,
+    ) -> LicenseStatus:
+        """Get current license status (no authentication required)."""
+        response = self._transport.request(
+            "GET",
+            "/v1/license/status",
+            timeout=timeout,
+        )
+        self._validate_response(LicenseStatus, response)
+        return LicenseStatus.model_validate(response)
 
     def with_options(
         self,

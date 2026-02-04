@@ -66,6 +66,49 @@ class VigilAuthenticationError(VigilError):
         super().__init__(message, status_code=status_code, **kwargs)
 
 
+class VigilLicenseError(VigilError):
+    """Base class for license-related errors (403 with LICENSE_* codes)."""
+
+    def __init__(
+        self,
+        message: str = "License error",
+        *,
+        error_code: Optional[str] = None,
+        status_code: int = 403,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(message, status_code=status_code, **kwargs)
+        self.error_code = error_code
+
+    def __str__(self) -> str:
+        base = super().__str__()
+        if self.error_code:
+            return f"{base} (code={self.error_code})"
+        return base
+
+
+class VigilLicenseExpiredError(VigilLicenseError):
+    """License has expired (past grace period)."""
+
+    def __init__(
+        self,
+        message: str = "Your license has expired",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(message, error_code="LICENSE_EXPIRED", **kwargs)
+
+
+class VigilLicenseRequiredError(VigilLicenseError):
+    """No valid license (UNLICENSED or REVOKED)."""
+
+    def __init__(
+        self,
+        message: str = "A valid license is required",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(message, error_code="LICENSE_REQUIRED", **kwargs)
+
+
 class VigilRateLimitError(VigilError):
     """Rate limit exceeded; inspect retry_after, limit, reset_at."""
 
@@ -229,6 +272,11 @@ def _raise_for_status(
         raise VigilAuthenticationError(message, **common)
 
     if status_code == 403:
+        error_code = body.get("error")
+        if error_code == "LICENSE_EXPIRED":
+            raise VigilLicenseExpiredError(body.get("message", message), **common)
+        if error_code == "LICENSE_REQUIRED":
+            raise VigilLicenseRequiredError(body.get("message", message), **common)
         raise VigilAuthenticationError(
             message or "Access forbidden",
             status_code=403,
@@ -288,6 +336,10 @@ def _should_retry(error: VigilError) -> bool:
     # Server errors - retry
     if isinstance(error, VigilServiceError):
         return True
+
+    # License errors - don't retry
+    if isinstance(error, VigilLicenseError):
+        return False
 
     # Client errors - don't retry
     if isinstance(error, (VigilAuthenticationError, VigilValidationError, VigilAPIError)):

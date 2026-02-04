@@ -25,6 +25,7 @@ from .responses import (
     BatchResult,
     DetectionResult,
     LanguageInfo,
+    LicenseStatus,
 )
 
 __all__ = [
@@ -47,4 +48,5 @@ __all__ = [
     "ContentModCategoryResult",
     # Other models
     "LanguageInfo",
+    "LicenseStatus",
 ]

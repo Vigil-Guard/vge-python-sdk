@@ -11,6 +11,9 @@ from vigil import (
     VigilConfigurationError,
     VigilConnectionError,
     VigilError,
+    VigilLicenseError,
+    VigilLicenseExpiredError,
+    VigilLicenseRequiredError,
     VigilRateLimitError,
     VigilRetryBudgetExceeded,
     VigilServiceError,
@@ -81,6 +84,68 @@ class TestVigilAuthenticationError:
         err = VigilAuthenticationError("Token expired", status_code=403, request_id="req_123")
         assert err.message == "Token expired"
         assert err.status_code == 403
+
+
+@pytest.mark.unit
+class TestVigilLicenseError:
+    """Tests for base license error."""
+
+    def test_default_message(self) -> None:
+        err = VigilLicenseError()
+        assert err.message == "License error"
+        assert err.status_code == 403
+        assert err.error_code is None
+
+    def test_with_error_code(self) -> None:
+        err = VigilLicenseError("Custom error", error_code="LICENSE_CUSTOM")
+        assert err.error_code == "LICENSE_CUSTOM"
+        assert "LICENSE_CUSTOM" in str(err)
+
+    def test_inheritance(self) -> None:
+        err = VigilLicenseError()
+        assert isinstance(err, VigilError)
+
+
+@pytest.mark.unit
+class TestVigilLicenseExpiredError:
+    """Tests for license expired error."""
+
+    def test_default_message(self) -> None:
+        err = VigilLicenseExpiredError()
+        assert "expired" in err.message.lower()
+        assert err.status_code == 403
+        assert err.error_code == "LICENSE_EXPIRED"
+
+    def test_custom_message(self) -> None:
+        err = VigilLicenseExpiredError("License expired on 2024-01-01", request_id="req_123")
+        assert err.message == "License expired on 2024-01-01"
+        assert err.request_id == "req_123"
+
+    def test_inheritance(self) -> None:
+        err = VigilLicenseExpiredError()
+        assert isinstance(err, VigilLicenseError)
+        assert isinstance(err, VigilError)
+
+
+@pytest.mark.unit
+class TestVigilLicenseRequiredError:
+    """Tests for license required error."""
+
+    def test_default_message(self) -> None:
+        err = VigilLicenseRequiredError()
+        assert "required" in err.message.lower()
+        assert err.status_code == 403
+        assert err.error_code == "LICENSE_REQUIRED"
+
+    def test_custom_message(self) -> None:
+        err = VigilLicenseRequiredError("No valid license found", request_id="req_456")
+        assert err.message == "No valid license found"
+        assert err.request_id == "req_456"
+
+    def test_inheritance(self) -> None:
+        err = VigilLicenseRequiredError()
+        assert isinstance(err, VigilLicenseError)
+        assert isinstance(err, VigilError)
 
 
 @pytest.mark.unit
@@ -233,6 +298,27 @@ class TestRaiseForStatus:
             _raise_for_status(403, {"error": "Forbidden"}, "req_123")
         assert exc_info.value.status_code == 403
 
+    def test_403_license_expired_raises_license_expired_error(self) -> None:
+        with pytest.raises(VigilLicenseExpiredError) as exc_info:
+            _raise_for_status(
+                403,
+                {"error": "LICENSE_EXPIRED", "message": "Your license has expired"},
+                "req_123",
+            )
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.error_code == "LICENSE_EXPIRED"
+        assert exc_info.value.request_id == "req_123"
+
+    def test_403_license_required_raises_license_required_error(self) -> None:
+        with pytest.raises(VigilLicenseRequiredError) as exc_info:
+            _raise_for_status(
+                403,
+                {"error": "LICENSE_REQUIRED", "message": "A valid license is required"},
+                "req_123",
+            )
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.error_code == "LICENSE_REQUIRED"
+
     def test_404_raises_api_error(self) -> None:
         with pytest.raises(VigilAPIError) as exc_info:
             _raise_for_status(404, {"error": "Not found"}, "req_123")
@@ -289,6 +375,15 @@ class TestShouldRetry:
 
     def test_auth_error_not_retryable(self) -> None:
         assert _should_retry(VigilAuthenticationError()) is False
+
+    def test_license_error_not_retryable(self) -> None:
+        assert _should_retry(VigilLicenseError()) is False
+
+    def test_license_expired_error_not_retryable(self) -> None:
+        assert _should_retry(VigilLicenseExpiredError()) is False
+
+    def test_license_required_error_not_retryable(self) -> None:
+        assert _should_retry(VigilLicenseRequiredError()) is False
 
     def test_validation_error_not_retryable(self) -> None:
         assert _should_retry(VigilValidationError("Bad input")) is False
