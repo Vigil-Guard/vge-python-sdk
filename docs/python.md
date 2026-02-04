@@ -100,15 +100,14 @@ else:
 ### On-Prem / Traefik
 
 Traefik is the bundled ingress for on-prem deployments. Use its host as
-`base_url` and point `ca_bundle` to the deployed TLS certificate in
-`infra/traefik/certs/vigilguard.crt` (the private key `vigilguard.key` stays on
-the server).
+`base_url` and point `ca_bundle` to the deployed TLS certificate from your
+environment (the private key stays on the server).
 
 ```python
 client = Vigil(
     api_key="vg_live_...",
     base_url="https://api.vigilguard.customer.domain",
-    ca_bundle="infra/traefik/certs/vigilguard.crt",
+    ca_bundle="/path/to/your/ca-bundle.crt",
 )
 ```
 
@@ -128,6 +127,27 @@ Suffix uses base64url characters (`A-Z`, `a-z`, `0-9`, `_`, `-`).
 ---
 
 ## API Methods
+
+### get_license_status()
+
+Fetch the current license status. This endpoint is public (no authentication required).
+
+```python
+def get_license_status(
+    *,
+    timeout: Optional[float] = None,
+) -> LicenseStatus
+```
+
+**Example:**
+
+```python
+status = client.get_license_status()
+if status.is_active:
+    print("License is active")
+elif status.is_expired:
+    print("License expired")
+```
 
 ### detect()
 
@@ -516,6 +536,9 @@ class Source(str, Enum):
 VigilError (base)
 ├── VigilConfigurationError    # Invalid configuration
 ├── VigilAuthenticationError   # 401, 403
+├── VigilLicenseError          # 403 with LICENSE_* codes
+│   ├── VigilLicenseExpiredError
+│   └── VigilLicenseRequiredError
 ├── VigilRateLimitError        # 429
 ├── VigilValidationError       # 400, 422
 ├── VigilAPIError              # 404, other 4xx
@@ -564,6 +587,10 @@ VigilError (base)
 - `successful` - List of successful results
 - `failed` - List of failed items
 
+**VigilLicenseError:**
+
+- `error_code` - LICENSE_* code from the API
+
 ### Retry Behavior
 
 | Exception                  | Retryable        |
@@ -572,6 +599,7 @@ VigilError (base)
 | `VigilTimeoutError`        | Yes              |
 | `VigilRateLimitError`      | Yes (with delay) |
 | `VigilServiceError`        | Yes              |
+| `VigilLicenseError`        | No               |
 | `VigilAuthenticationError` | No               |
 | `VigilValidationError`     | No               |
 | `VigilConfigurationError`  | No               |
@@ -584,6 +612,8 @@ VigilError (base)
 from vigil import (
     Vigil,
     VigilAuthenticationError,
+    VigilLicenseExpiredError,
+    VigilLicenseRequiredError,
     VigilRateLimitError,
     VigilValidationError,
     VigilServiceError,
@@ -597,6 +627,10 @@ try:
     result = client.detect(text)
 except VigilAuthenticationError as e:
     print(f"Invalid API key: {e.message}")
+except VigilLicenseExpiredError as e:
+    print(f"License expired: {e.message}")
+except VigilLicenseRequiredError as e:
+    print(f"License required: {e.message}")
 except VigilValidationError as e:
     for err in e.errors:
         print(f"{err['path']}: {err['message']}")
