@@ -238,6 +238,8 @@ from vigil import (
     VigilError,
     VigilConfigurationError,
     VigilAuthenticationError,
+    VigilLicenseExpiredError,
+    VigilLicenseRequiredError,
     VigilValidationError,
     VigilRateLimitError,
     VigilServiceError,
@@ -251,6 +253,10 @@ try:
     result = client.detect(text)
 except VigilAuthenticationError:
     print("Invalid API key")
+except VigilLicenseExpiredError:
+    print("License expired")
+except VigilLicenseRequiredError:
+    print("License required")
 except VigilValidationError as e:
     print(f"Validation failed: {e.errors}")
 except VigilRateLimitError as e:
@@ -267,6 +273,18 @@ except VigilBatchPartialFailure as e:
     print(f"Batch partial failure: {e.successful}, {e.failed}")
 except VigilError as e:
     print(f"General error: {e}")
+```
+
+## License Status
+
+Fetch the current license status (public endpoint).
+
+```python
+status = client.get_license_status()
+if status.is_active:
+    print("License is active")
+elif status.is_expired:
+    print("License expired")
 ```
 
 ## Per-Request Options
