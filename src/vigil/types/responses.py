@@ -236,3 +236,30 @@ class BatchResult(BaseModel):
     def __getitem__(self, index: int) -> BatchItemResult:
         """Get item by index."""
         return self.items[index]
+
+
+class LicenseStatus(BaseModel):
+    """License status from /v1/license/status endpoint."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    status: str = Field(alias="status")
+    type: Optional[str] = Field(default=None, alias="type")
+    expires_at: Optional[str] = Field(default=None, alias="expiresAt")
+    days_remaining: Optional[int] = Field(default=None, alias="daysRemaining")
+    is_built_in: bool = Field(default=False, alias="isBuiltIn")
+
+    @property
+    def is_active(self) -> bool:
+        """Check if license is currently active."""
+        return self.status in ("ACTIVE", "TRIAL")
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if license has expired."""
+        return self.status == "EXPIRED"
+
+    @property
+    def is_expiring_soon(self) -> bool:
+        """Check if license expires within 30 days."""
+        return self.days_remaining is not None and self.days_remaining <= 30
