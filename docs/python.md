@@ -540,7 +540,7 @@ VigilError (base)
 │   ├── VigilLicenseExpiredError
 │   └── VigilLicenseRequiredError
 ├── VigilRateLimitError        # 429
-├── VigilValidationError       # 400, 422
+├── VigilValidationError       # 400
 ├── VigilAPIError              # 404, other 4xx
 ├── VigilServiceError          # 5xx
 ├── VigilConnectionError       # Network failures
