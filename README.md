@@ -87,9 +87,8 @@ async with AsyncVigil(api_key="vg_live_...") as client:
 ### Enterprise Configuration
 
 Traefik is the bundled ingress for the on-prem stack. Use its host as `base_url`
-and point `ca_bundle` to the deployed TLS certificate in
-`infra/traefik/certs/vigilguard.crt` (the private key `vigilguard.key` stays on
-the server).
+and point `ca_bundle` to the deployed TLS certificate from your environment
+(the private key stays on the server).
 
 ```python
 client = Vigil(
@@ -97,7 +96,7 @@ client = Vigil(
     base_url="https://api.vigilguard.customer.domain",
     timeout=60.0,
     proxy="http://proxy.corp.com:8080",
-    ca_bundle="infra/traefik/certs/vigilguard.crt",
+    ca_bundle="/path/to/your/ca-bundle.crt",
 )
 ```
 

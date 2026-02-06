@@ -74,7 +74,7 @@ else:
 | `keepalive_expiry`          | `float` | `5.0`                        | Keepalive expiry (seconds)                       |
 | `proxy`                     | `str`   | `None`                       | HTTP proxy URL                                   |
 | `proxy_auth`                | `tuple` | `None`                       | Proxy auth `(username, password)`                |
-| `verify`                    | `bool`  | `True`                       | Verify SSL certificates                          |
+| `verify`                    | `bool`  | `True`                       | Verify SSL certificates (emits warning if `False` with live key) |
 | `ca_bundle`                 | `str`   | `None`                       | Path to CA bundle file                           |
 | `client_cert`               | `str`   | `None`                       | Path to client certificate (mTLS)                |
 | `client_key`                | `str`   | `None`                       | Path to client key (mTLS)                        |
@@ -725,10 +725,14 @@ client = Vigil(
 
 ### Disable SSL Verification
 
+> **Warning:** Setting `verify=False` with a live API key (`vg_live_*`) emits a
+> `UserWarning` at runtime. This is intentional — disabling SSL in production
+> exposes traffic to interception.
+
 ```python
-# Not recommended for production
+# Development/testing only
 client = Vigil(
-    api_key="vg_live_...",
+    api_key="vg_test_...",
     verify=False,
 )
 ```
@@ -813,5 +817,5 @@ src/vigil/
 
 ---
 
-**Last Updated:** 2025-01-15
+**Last Updated:** 2026-02-06
 **SDK Version:** 1.0.0
