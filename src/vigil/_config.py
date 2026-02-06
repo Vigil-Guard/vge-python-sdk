@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple, Union
 from urllib.parse import urlparse
@@ -80,8 +81,7 @@ def _resolve_api_key(api_key: Optional[str]) -> str:
         )
     if not API_KEY_PATTERN.match(key):
         raise VigilConfigurationError(
-            f"Invalid API key format. Expected pattern: vg_(live|test)_<32+ chars>. "
-            f"Got: {key[:20]}..."
+            "Invalid API key format. Expected pattern: vg_(live|test)_<32+ chars>."
         )
     return key
 
@@ -248,13 +248,18 @@ class ClientConfig:
             _validate_file_path("mTLS key", key_path)
         else:
             if config.client_key and not config.client_cert:
-                raise VigilConfigurationError(
-                    "client_key provided without client_cert."
-                )
+                raise VigilConfigurationError("client_key provided without client_cert.")
             _validate_file_path("Client certificate", config.client_cert)
             _validate_file_path("Client key", config.client_key)
 
         _validate_file_path("CA bundle", config.ca_bundle)
+
+        if not config.verify and config.is_live_mode:
+            warnings.warn(
+                "SSL verification is disabled for a live API key. "
+                "This is insecure and not recommended for production.",
+                stacklevel=3,
+            )
 
         return config
 

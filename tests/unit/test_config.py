@@ -130,9 +130,7 @@ class TestClientConfigFromParams:
     def test_from_params_missing_api_key_raises(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):
             with pytest.raises(VigilConfigurationError) as exc_info:
-                ClientConfig.from_params(
-                    base_url="https://api.vigilguard.test.local"
-                )
+                ClientConfig.from_params(base_url="https://api.vigilguard.test.local")
             assert "api_key is required" in str(exc_info.value)
 
     def test_from_params_invalid_api_key_format_raises(self) -> None:
@@ -290,4 +288,39 @@ class TestApiKeyValidation:
             ClientConfig.from_params(
                 api_key="vg_test_aaaa!@#$aaaaaaaaaaaaaaaaaaaaaa",
                 base_url="https://api.vigilguard.test.local",
+            )
+
+
+@pytest.mark.unit
+class TestSslVerificationWarning:
+    """Tests for SSL verification warning on live keys."""
+
+    def test_verify_false_live_key_emits_warning(self) -> None:
+        with pytest.warns(UserWarning, match="SSL verification is disabled"):
+            ClientConfig.from_params(
+                api_key="vg_live_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                base_url="https://api.vigilguard.test.local",
+                verify=False,
+            )
+
+    def test_verify_false_test_key_no_warning(self) -> None:
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ClientConfig.from_params(
+                api_key="vg_test_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                base_url="https://api.vigilguard.test.local",
+                verify=False,
+            )
+
+    def test_verify_true_live_key_no_warning(self) -> None:
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ClientConfig.from_params(
+                api_key="vg_live_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                base_url="https://api.vigilguard.test.local",
+                verify=True,
             )

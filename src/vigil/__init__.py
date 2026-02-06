@@ -21,7 +21,7 @@ Enterprise Configuration:
     ...     base_url="https://api.vigilguard.customer.domain",
     ...     timeout=30.0,
     ...     proxy="http://proxy.corp.com:8080",
-    ...     ca_bundle="infra/traefik/certs/vigilguard.crt",
+    ...     ca_bundle="/path/to/your/ca-bundle.crt",
     ...     client_cert="/path/to/client.crt",
     ...     client_key="/path/to/client.key",
     ... )
