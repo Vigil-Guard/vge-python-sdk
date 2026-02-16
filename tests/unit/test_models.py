@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from conftest import build_detection_response
 from pydantic import ValidationError
 
 from vigil.types import (
@@ -16,22 +17,6 @@ from vigil.types import (
     SemanticBranch,
     ThreatLevel,
 )
-
-
-def build_detection_response(**overrides: object) -> dict[str, object]:
-    data: dict[str, object] = {
-        "requestId": "req_123",
-        "decision": "ALLOWED",
-        "score": 10.0,
-        "threatLevel": "LOW",
-        "confidence": 0.9,
-        "categories": [],
-        "branches": {},
-        "latencyMs": 5,
-        "timestamp": "2024-01-15T10:30:00Z",
-    }
-    data.update(overrides)
-    return data
 
 
 @pytest.mark.unit

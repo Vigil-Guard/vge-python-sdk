@@ -66,7 +66,7 @@ class LlmGuardBranch(BaseModel):
     Uses a classifier model to analyze potential prompt injections.
     """
 
-    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, protected_namespaces=())
 
     score: float = Field(alias="score")
     verdict: str = Field(alias="verdict")
@@ -91,7 +91,7 @@ class ContentModBranch(BaseModel):
     Includes per-category classifications and policy action metadata.
     """
 
-    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, protected_namespaces=())
 
     score: float = Field(alias="score")
     confidence: float = Field(alias="confidence")
