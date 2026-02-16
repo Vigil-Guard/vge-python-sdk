@@ -186,7 +186,8 @@ class AsyncVigil:
         timeout: Optional[float] = None,
     ) -> LicenseStatus:
         """Get current license status (no authentication required)."""
-        response = await self._transport.request(
+        response = await self._retry.execute(
+            self._transport,
             "GET",
             "/v1/license/status",
             timeout=timeout,

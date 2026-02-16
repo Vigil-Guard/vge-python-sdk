@@ -27,6 +27,22 @@ DUMMY_BASE_URL = "https://api.vigilguard.test.local"
 DUMMY_API_KEY = "vg_test_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 
+def build_detection_response(**overrides: object) -> dict[str, object]:
+    data: dict[str, object] = {
+        "requestId": "req_123",
+        "decision": "ALLOWED",
+        "score": 10.0,
+        "threatLevel": "LOW",
+        "confidence": 0.9,
+        "categories": [],
+        "branches": {},
+        "latencyMs": 5,
+        "timestamp": "2024-01-15T10:30:00Z",
+    }
+    data.update(overrides)
+    return data
+
+
 @pytest.fixture(autouse=True)
 def block_network() -> Generator[respx.MockRouter, None, None]:
     """
@@ -79,21 +95,16 @@ def respx_mock(block_network: respx.MockRouter) -> respx.MockRouter:
 @pytest.fixture
 def mock_detect_response() -> dict[str, object]:
     """Standard detect response for contract tests."""
-    return {
-        "requestId": "req_123",
-        "decision": "ALLOWED",
-        "score": 15,
-        "threatLevel": "LOW",
-        "confidence": 0.95,
-        "categories": [],
-        "branches": {
+    return build_detection_response(
+        score=15,
+        confidence=0.95,
+        branches={
             "heuristics": {"score": 10, "threatLevel": "LOW", "explanations": []},
             "semantic": {"score": 5, "attackSimilarity": 0.1, "safeSimilarity": 0.9},
             "pii": {"detected": False, "entityCount": 0, "categories": []},
         },
-        "latencyMs": 12,
-        "timestamp": "2024-01-15T10:30:00Z",
-    }
+        latencyMs=12,
+    )
 
 
 @pytest.fixture

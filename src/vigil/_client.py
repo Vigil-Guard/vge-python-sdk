@@ -185,7 +185,8 @@ class Vigil:
         timeout: Optional[float] = None,
     ) -> LicenseStatus:
         """Get current license status (no authentication required)."""
-        response = self._transport.request(
+        response = self._retry.execute(
+            self._transport,
             "GET",
             "/v1/license/status",
             timeout=timeout,

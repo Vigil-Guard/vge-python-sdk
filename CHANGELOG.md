@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.3] - 2026-02-16
 
+### Fixed
+
+- Pydantic `model_` namespace warning on `LlmGuardBranch` and `ContentModBranch`
+- `get_license_status()` now routes through retry handler (sync and async)
+
+### Added
+
+- Unit tests for `validate_no_extra_fields()` strict-mode validation
+- Async transport and retry handler tests (22 new tests)
+
 ### Changed
 
-- Version bump to align with Vigil Guard Enterprise 1.0.3 release
+- Deduplicated `build_detection_response()` test helper into `conftest.py`
+- Test coverage increased from 76% to 86%
 
 ## [1.0.0] - 2026-01-14
 
