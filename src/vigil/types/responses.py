@@ -102,6 +102,24 @@ class DetectionResult(BaseModel):
         """Check if PII was detected."""
         return self.branches.has_pii
 
+    @property
+    def is_drifted(self) -> bool:
+        """Check if policy drift was detected with non-ON_SCOPE level."""
+        drift = self.branches.semantic.policy_drift if self.branches.semantic else None
+        return drift is not None and drift.available and drift.level not in (None, "ON_SCOPE")
+
+    @property
+    def drift_level(self) -> str | None:
+        """Get policy drift level if available."""
+        drift = self.branches.semantic.policy_drift if self.branches.semantic else None
+        return drift.level if drift and drift.available else None
+
+    @property
+    def drift_score(self) -> float | None:
+        """Get policy drift score if available."""
+        drift = self.branches.semantic.policy_drift if self.branches.semantic else None
+        return drift.drift_score if drift and drift.available else None
+
 
 class BatchItemError(BaseModel):
     """Error details for a failed batch item."""

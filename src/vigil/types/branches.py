@@ -28,6 +28,25 @@ class HeuristicsBranch(BaseModel):
     timing_ms: Optional[int] = Field(default=None, alias="timingMs")
 
 
+class PolicyDriftSignal(BaseModel):
+    """Policy drift detection signal from scope analysis."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    enabled: bool = Field(alias="enabled")
+    available: bool = Field(alias="available")
+    drift_score: Optional[float] = Field(default=None, alias="driftScore")
+    level: Optional[Literal["ON_SCOPE", "NEAR_SCOPE", "OFF_SCOPE", "MANIPULATION"]] = Field(
+        default=None, alias="level"
+    )
+    action: Literal["ALLOW", "BLOCK"] = Field(alias="action")
+    explanation: str = Field(alias="explanation")
+    sensitivity: Literal["relaxed", "balanced", "strict"] = Field(alias="sensitivity")
+    scope_fingerprint: Optional[str] = Field(default=None, alias="scopeFingerprint")
+    degraded_reason: Optional[str] = Field(default=None, alias="degradedReason")
+    latency_ms: int = Field(alias="latencyMs")
+
+
 class SemanticBranch(BaseModel):
     """
     Results from semantic/embedding-based detection.
@@ -42,6 +61,7 @@ class SemanticBranch(BaseModel):
     safe_similarity: float = Field(alias="safeSimilarity")
     matched_category: Optional[str] = Field(default=None, alias="matchedCategory")
     timing_ms: Optional[int] = Field(default=None, alias="timingMs")
+    policy_drift: Optional[PolicyDriftSignal] = Field(default=None, alias="policyDrift")
 
 
 class PiiBranch(BaseModel):
