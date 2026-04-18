@@ -222,7 +222,8 @@ result = client.detect_output(
 
 ### analyze()
 
-Analyze text with explicit source type.
+Analyze text with the required `source` field used for contract compatibility and future
+source-aware policy use.
 
 ```python
 def analyze(
@@ -238,7 +239,7 @@ def analyze(
 **Parameters:**
 
 - `text` - Text to analyze (required)
-- `source` - Source type enum (required)
+- `source` - Source type enum (required; reserved for future source-aware policy use)
 - `metadata` - Tracking metadata (optional)
 - `timeout` - Override request timeout (optional)
 - `idempotency_key` - Idempotency key header (auto-generated if not provided)
@@ -248,6 +249,9 @@ def analyze(
 - `Source.USER_INPUT` - Direct user input
 - `Source.MODEL_OUTPUT` - LLM generated content
 - `Source.TOOL_OUTPUT` - Tool/function call output
+
+The backend accepts and propagates `source` today, but current scoring and rule evaluation do
+not branch on it yet.
 
 **Example:**
 

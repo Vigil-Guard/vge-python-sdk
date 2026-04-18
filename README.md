@@ -147,7 +147,8 @@ result = client.detect_output(
 
 ### analyze(text, source)
 
-Analyze text with explicit source type.
+Analyze text with the required `source` field used for contract compatibility and future
+source-aware policy use.
 
 ```python
 from vigil import Source
@@ -161,6 +162,9 @@ result = client.analyze(text, Source.MODEL_OUTPUT)
 # For tool/function call output
 result = client.analyze(text, Source.TOOL_OUTPUT)
 ```
+
+The backend accepts and propagates `source` today, but current scoring and rule evaluation do
+not branch on it yet.
 
 ### batch(items)
 

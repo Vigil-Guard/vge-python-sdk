@@ -141,7 +141,7 @@ class AsyncVigil:
         timeout: Optional[float] = None,
         idempotency_key: Optional[str] = None,
     ) -> DetectionResult:
-        """Analyze text with an explicit Source value."""
+        """Analyze text with the required Source field reserved for future policy use."""
         payload = GuardAnalyzePayload(text=text, source=source, metadata=metadata or {})
         key = idempotency_key or generate_idempotency_key()
 

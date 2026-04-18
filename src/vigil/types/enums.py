@@ -54,7 +54,10 @@ class ThreatLevel(str, Enum):
 
 class Source(str, Enum):
     """
-    Content source classification for analyze endpoint.
+    Content source classification for the analyze endpoint.
+
+    The API currently accepts and propagates this field for contract compatibility and future
+    source-aware policy use. Current scoring and rule evaluation do not branch on it yet.
 
     Values:
         USER_INPUT: Direct user input to the LLM
