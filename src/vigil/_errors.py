@@ -155,6 +155,20 @@ class VigilValidationError(VigilError):
         return base
 
 
+class VigilClientVersionError(VigilValidationError):
+    """SDK request uses features unsupported by the target server version."""
+
+    def __init__(
+        self,
+        message: str = (
+            "Typed agent/tool/conversation fields and new source values require a "
+            "PRD_29-compatible server."
+        ),
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(message, **kwargs)
+
+
 class VigilAPIError(VigilError):
     """Other 4xx errors not mapped to a specific type."""
 

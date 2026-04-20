@@ -61,10 +61,14 @@ class Source(str, Enum):
 
     Values:
         USER_INPUT: Direct user input to the LLM
+        TOOL_INPUT: Input forwarded to a tool/function call
         TOOL_OUTPUT: Output from an LLM tool/function call
         MODEL_OUTPUT: Generated content from the LLM
+        SYSTEM_PROMPT: System/developer instruction content
     """
 
     USER_INPUT = "user_input"
+    TOOL_INPUT = "tool_input"
     TOOL_OUTPUT = "tool_output"
     MODEL_OUTPUT = "model_output"
+    SYSTEM_PROMPT = "system_prompt"

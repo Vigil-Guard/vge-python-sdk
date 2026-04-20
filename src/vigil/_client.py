@@ -2,24 +2,40 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
 
 from ._config import ClientConfig
-from ._errors import VigilAPIError
+from ._errors import VigilAPIError, VigilClientVersionError, VigilValidationError
 from ._http import HttpTransport, generate_idempotency_key
 from ._retry import RetryConfig
 from .types._validation import validate_no_extra_fields
 from .types.enums import Source
 from .types.requests import (
+    AgentPayload,
     BatchItem,
     BatchPayload,
+    ConversationMessagePayload,
     GuardAnalyzePayload,
     GuardInputPayload,
     GuardOutputPayload,
+    ToolPayload,
 )
 from .types.responses import BatchResult, DetectionResult, LicenseStatus
+
+PRD29_COMPATIBILITY_TOKENS = (
+    "agent",
+    "tool",
+    "conversation",
+    "tool_input",
+    "system_prompt",
+)
+PRD29_COMPATIBILITY_MESSAGE = (
+    "Typed agent/tool/conversation fields and new source values require a "
+    "PRD_29-compatible server."
+)
 
 
 class Vigil:
@@ -83,21 +99,41 @@ class Vigil:
         text: str,
         *,
         metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[AgentPayload] = None,
+        tool: Optional[ToolPayload] = None,
+        conversation: Optional[List[ConversationMessagePayload]] = None,
         timeout: Optional[float] = None,
         idempotency_key: Optional[str] = None,
     ) -> DetectionResult:
         """Analyze user input for prompt injection."""
-        payload = GuardInputPayload(prompt=text, metadata=metadata or {})
+        payload = GuardInputPayload(
+            prompt=text,
+            metadata=metadata or {},
+            agent=agent,
+            tool=tool,
+            conversation=conversation or [],
+        )
         key = idempotency_key or generate_idempotency_key()
 
-        response = self._retry.execute(
-            self._transport,
-            "POST",
-            "/v1/guard/input",
-            json=payload.to_dict(),
-            timeout=timeout,
-            idempotency_key=key,
-        )
+        try:
+            response = self._retry.execute(
+                self._transport,
+                "POST",
+                "/v1/guard/input",
+                json=payload.to_dict(),
+                timeout=timeout,
+                idempotency_key=key,
+            )
+        except VigilValidationError as exc:
+            self._raise_client_version_error_if_needed(
+                exc,
+                uses_prd29_contract=_uses_prd29_contract(
+                    agent=agent,
+                    tool=tool,
+                    conversation=conversation,
+                ),
+            )
+            raise
 
         self._validate_response(DetectionResult, response)
         return DetectionResult.model_validate(response)
@@ -108,6 +144,9 @@ class Vigil:
         *,
         original_prompt: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[AgentPayload] = None,
+        tool: Optional[ToolPayload] = None,
+        conversation: Optional[List[ConversationMessagePayload]] = None,
         timeout: Optional[float] = None,
         idempotency_key: Optional[str] = None,
     ) -> DetectionResult:
@@ -116,17 +155,31 @@ class Vigil:
             output=output,
             original_prompt=original_prompt,
             metadata=metadata or {},
+            agent=agent,
+            tool=tool,
+            conversation=conversation or [],
         )
         key = idempotency_key or generate_idempotency_key()
 
-        response = self._retry.execute(
-            self._transport,
-            "POST",
-            "/v1/guard/output",
-            json=payload.to_dict(),
-            timeout=timeout,
-            idempotency_key=key,
-        )
+        try:
+            response = self._retry.execute(
+                self._transport,
+                "POST",
+                "/v1/guard/output",
+                json=payload.to_dict(),
+                timeout=timeout,
+                idempotency_key=key,
+            )
+        except VigilValidationError as exc:
+            self._raise_client_version_error_if_needed(
+                exc,
+                uses_prd29_contract=_uses_prd29_contract(
+                    agent=agent,
+                    tool=tool,
+                    conversation=conversation,
+                ),
+            )
+            raise
 
         self._validate_response(DetectionResult, response)
         return DetectionResult.model_validate(response)
@@ -137,21 +190,43 @@ class Vigil:
         source: Source,
         *,
         metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[AgentPayload] = None,
+        tool: Optional[ToolPayload] = None,
+        conversation: Optional[List[ConversationMessagePayload]] = None,
         timeout: Optional[float] = None,
         idempotency_key: Optional[str] = None,
     ) -> DetectionResult:
         """Analyze text with the required Source field reserved for future policy use."""
-        payload = GuardAnalyzePayload(text=text, source=source, metadata=metadata or {})
+        payload = GuardAnalyzePayload(
+            text=text,
+            source=source,
+            metadata=metadata or {},
+            agent=agent,
+            tool=tool,
+            conversation=conversation or [],
+        )
         key = idempotency_key or generate_idempotency_key()
 
-        response = self._retry.execute(
-            self._transport,
-            "POST",
-            "/v1/guard/analyze",
-            json=payload.to_dict(),
-            timeout=timeout,
-            idempotency_key=key,
-        )
+        try:
+            response = self._retry.execute(
+                self._transport,
+                "POST",
+                "/v1/guard/analyze",
+                json=payload.to_dict(),
+                timeout=timeout,
+                idempotency_key=key,
+            )
+        except VigilValidationError as exc:
+            self._raise_client_version_error_if_needed(
+                exc,
+                uses_prd29_contract=_uses_prd29_contract(
+                    agent=agent,
+                    tool=tool,
+                    conversation=conversation,
+                    source=source,
+                ),
+            )
+            raise
 
         self._validate_response(DetectionResult, response)
         return DetectionResult.model_validate(response)
@@ -167,14 +242,21 @@ class Vigil:
         payload = BatchPayload(items=items)
         key = idempotency_key or generate_idempotency_key()
 
-        response = self._retry.execute(
-            self._transport,
-            "POST",
-            "/v1/guard/batch",
-            json=payload.to_dict(),
-            timeout=timeout,
-            idempotency_key=key,
-        )
+        try:
+            response = self._retry.execute(
+                self._transport,
+                "POST",
+                "/v1/guard/batch",
+                json=payload.to_dict(),
+                timeout=timeout,
+                idempotency_key=key,
+            )
+        except VigilValidationError as exc:
+            self._raise_client_version_error_if_needed(
+                exc,
+                uses_prd29_contract=any(_batch_item_uses_prd29_contract(item) for item in items),
+            )
+            raise
 
         self._validate_response(BatchResult, response)
         return BatchResult.model_validate(response)
@@ -241,6 +323,32 @@ class Vigil:
             request_id = response.get("requestId")
             raise VigilAPIError(str(exc), request_id=request_id, body=response) from exc
 
+    def _raise_client_version_error_if_needed(
+        self,
+        exc: VigilValidationError,
+        *,
+        uses_prd29_contract: bool,
+    ) -> None:
+        if not uses_prd29_contract:
+            return
+
+        searchable_parts = [exc.message]
+        if exc.body:
+            searchable_parts.append(json.dumps(exc.body, sort_keys=True))
+        for error in exc.errors:
+            searchable_parts.append(str(error.get("path", "")))
+            searchable_parts.append(str(error.get("message", "")))
+
+        searchable_text = " ".join(searchable_parts).lower()
+        if any(token in searchable_text for token in PRD29_COMPATIBILITY_TOKENS):
+            raise VigilClientVersionError(
+                PRD29_COMPATIBILITY_MESSAGE,
+                status_code=exc.status_code or 400,
+                request_id=exc.request_id,
+                body=exc.body,
+                errors=exc.errors,
+            ) from exc
+
     @property
     def is_test_mode(self) -> bool:
         """Check if using test API key."""
@@ -264,3 +372,26 @@ class Vigil:
     def __repr__(self) -> str:
         mode = "test" if self.is_test_mode else "live"
         return f"Vigil(base_url={self._config.base_url!r}, mode={mode})"
+
+
+def _uses_prd29_contract(
+    *,
+    agent: Optional[AgentPayload] = None,
+    tool: Optional[ToolPayload] = None,
+    conversation: Optional[List[ConversationMessagePayload]] = None,
+    source: Optional[Source] = None,
+) -> bool:
+    if agent is not None or tool is not None:
+        return True
+    if conversation:
+        return True
+    return source in (Source.TOOL_INPUT, Source.SYSTEM_PROMPT)
+
+
+def _batch_item_uses_prd29_contract(item: BatchItem) -> bool:
+    return _uses_prd29_contract(
+        agent=item.agent,
+        tool=item.tool,
+        conversation=item.conversation,
+        source=item.source,
+    )

@@ -3,6 +3,7 @@ Vigil Guard SDK Type Definitions.
 
 Public exports:
     - Enums: Decision, ThreatLevel, Source
+    - Request helpers: AgentPayload, ToolPayload, ToolResultPayload, ConversationMessagePayload
     - Response models: DetectionResult, BatchResult, BatchItemResult
     - Branch models: HeuristicsBranch, SemanticBranch, PiiBranch, ContentModBranch, DetectionBranches
 """
@@ -19,6 +20,7 @@ from .branches import (
     SemanticBranch,
 )
 from .enums import Decision, Source, ThreatLevel
+from .requests import AgentPayload, ConversationMessagePayload, ToolPayload, ToolResultPayload
 from .responses import (
     BatchItemError,
     BatchItemResult,
@@ -33,6 +35,11 @@ __all__ = [
     "Decision",
     "ThreatLevel",
     "Source",
+    # Request helpers
+    "AgentPayload",
+    "ToolPayload",
+    "ToolResultPayload",
+    "ConversationMessagePayload",
     # Response models
     "DetectionResult",
     "BatchResult",

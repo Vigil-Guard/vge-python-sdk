@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 import respx
 from conftest import build_detection_response
 from httpx import Response
 
-from vigil import AsyncVigil, BatchItem, Decision, Source, VigilConfigurationError
+from vigil import (
+    AgentPayload,
+    AsyncVigil,
+    BatchItem,
+    ConversationMessagePayload,
+    Decision,
+    Source,
+    ToolPayload,
+    VigilClientVersionError,
+    VigilConfigurationError,
+)
 
 DUMMY_BASE_URL = "https://api.vigilguard.test.local"
 DUMMY_API_KEY = "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -223,6 +235,103 @@ class TestAsyncVigilAnalyze:
         request = route.calls[0].request
         assert b'"source":"model_output"' in request.content
 
+    @pytest.mark.asyncio
+    async def test_analyze_with_metadata_remains_backward_compatible(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
+        """Analyze still supports legacy metadata-only callers."""
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/analyze").mock(
+            return_value=Response(
+                200,
+                json=build_detection_response(
+                    requestId="req_async_analyze_legacy",
+                    decision="ALLOWED",
+                    score=11,
+                ),
+            )
+        )
+
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            await client.analyze(
+                "legacy async",
+                Source.MODEL_OUTPUT,
+                metadata={"trace_id": "legacy-async"},
+            )
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["source"] == "model_output"
+        assert body["metadata"]["trace_id"] == "legacy-async"
+        assert "agent" not in body
+        assert "tool" not in body
+        assert "conversation" not in body
+
+    @pytest.mark.asyncio
+    async def test_analyze_with_typed_payloads(self, respx_mock: respx.MockRouter) -> None:
+        """Analyze serializes typed agent/tool/conversation payloads."""
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/analyze").mock(
+            return_value=Response(
+                200,
+                json=build_detection_response(
+                    requestId="req_async_analyze_typed",
+                    decision="ALLOWED",
+                    score=9,
+                ),
+            )
+        )
+
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            await client.analyze(
+                "ls -la",
+                Source.TOOL_INPUT,
+                agent=AgentPayload(framework="claude-code", session_id="sess_async"),
+                tool=ToolPayload(
+                    name="Bash",
+                    vendor="anthropic",
+                    args={"command": "ls -la"},
+                ),
+                conversation=[
+                    ConversationMessagePayload(role="system", content="You are a CLI agent."),
+                    ConversationMessagePayload(role="tool", content="total 4", tool_name="Bash"),
+                ],
+            )
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["source"] == "tool_input"
+        assert body["agent"]["framework"] == "claude-code"
+        assert body["agent"]["sessionId"] == "sess_async"
+        assert body["tool"]["name"] == "Bash"
+        assert body["tool"]["args"]["command"] == "ls -la"
+        assert body["conversation"][1]["toolName"] == "Bash"
+
+    @pytest.mark.asyncio
+    async def test_analyze_raises_client_version_error_for_pre_prd29_server(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
+        """Typed analyze requests raise a friendly compatibility error on old servers."""
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/analyze").mock(
+            return_value=Response(
+                400,
+                json={
+                    "error": "Validation failed",
+                    "details": [
+                        {"path": "source", "message": "Invalid enum value 'tool_input'"},
+                        {"path": "agent.framework", "message": "Unexpected field"},
+                    ],
+                },
+            )
+        )
+
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            with pytest.raises(
+                VigilClientVersionError,
+                match="PRD_29-compatible server",
+            ):
+                await client.analyze(
+                    "ls -la",
+                    Source.TOOL_INPUT,
+                    agent=AgentPayload(framework="claude-code"),
+                )
+
 
 class TestAsyncVigilBatch:
     """Tests for async batch() method."""
@@ -301,6 +410,51 @@ class TestAsyncVigilBatch:
         assert result.has_failures is True
         assert result.succeeded == 1
         assert result.failed == 1
+
+    @pytest.mark.asyncio
+    async def test_batch_serializes_typed_fields(self, respx_mock: respx.MockRouter) -> None:
+        """Batch items preserve typed payload fields."""
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/batch").mock(
+            return_value=Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "index": 0,
+                            "ok": True,
+                            "response": build_detection_response(
+                                requestId="req_async_batch_typed",
+                                decision="ALLOWED",
+                                score=4,
+                            ),
+                        }
+                    ],
+                },
+            )
+        )
+
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            await client.batch(
+                [
+                    BatchItem(
+                        text="tool output",
+                        source=Source.TOOL_OUTPUT,
+                        metadata={"trace_id": "async-batch-1"},
+                        agent=AgentPayload(framework="openai-agents", trace_id="trace_async"),
+                        tool=ToolPayload(name="WebFetch", vendor="openai"),
+                        conversation=[
+                            ConversationMessagePayload(role="assistant", content="Calling tool"),
+                        ],
+                    )
+                ]
+            )
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["items"][0]["source"] == "tool_output"
+        assert body["items"][0]["metadata"]["trace_id"] == "async-batch-1"
+        assert body["items"][0]["agent"]["traceId"] == "trace_async"
+        assert body["items"][0]["tool"]["name"] == "WebFetch"
+        assert body["items"][0]["conversation"][0]["role"] == "assistant"
 
 
 class TestAsyncVigilWithOptions:

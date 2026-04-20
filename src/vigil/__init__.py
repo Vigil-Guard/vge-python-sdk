@@ -36,6 +36,7 @@ from ._errors import (
     VigilAPIError,
     VigilAuthenticationError,
     VigilBatchPartialFailure,
+    VigilClientVersionError,
     VigilConfigurationError,
     VigilConnectionError,
     VigilError,
@@ -49,7 +50,15 @@ from ._errors import (
     VigilValidationError,
 )
 from ._version import __version__
-from .types import Decision, Source, ThreatLevel
+from .types import (
+    AgentPayload,
+    ConversationMessagePayload,
+    Decision,
+    Source,
+    ThreatLevel,
+    ToolPayload,
+    ToolResultPayload,
+)
 from .types.requests import BatchItem
 from .types.responses import BatchResult, DetectionResult, LicenseStatus
 
@@ -65,6 +74,7 @@ __all__ = [
     "VigilError",
     "VigilConfigurationError",
     "VigilAuthenticationError",
+    "VigilClientVersionError",
     "VigilLicenseError",
     "VigilLicenseExpiredError",
     "VigilLicenseRequiredError",
@@ -80,6 +90,10 @@ __all__ = [
     "Decision",
     "ThreatLevel",
     "Source",
+    "AgentPayload",
+    "ToolPayload",
+    "ToolResultPayload",
+    "ConversationMessagePayload",
     # Request/Response Models
     "BatchItem",
     "DetectionResult",

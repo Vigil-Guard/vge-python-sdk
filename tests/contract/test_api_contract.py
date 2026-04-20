@@ -7,16 +7,21 @@ They ensure the SDK remains compatible with the API contract defined in openapi.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 import respx
 from conftest import build_detection_response
 from httpx import Response
 
 from vigil import (
+    AgentPayload,
     AsyncVigil,
     BatchItem,
+    ConversationMessagePayload,
     Decision,
     Source,
+    ToolPayload,
     ThreatLevel,
     Vigil,
     VigilAuthenticationError,
@@ -260,6 +265,92 @@ class TestDetectionResponseContract:
         assert result.branches.semantic is None
         assert result.branches.pii is None
         assert result.branches.llm_guard is None
+
+
+class TestTypedRequestContract:
+    """Contract tests for typed request serialization."""
+
+    def test_detect_serializes_agent_tool_and_conversation(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
+        """Sync detect request matches the typed API contract."""
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(
+                200,
+                json=build_detection_response(
+                    requestId="req_contract_typed_detect",
+                    decision="ALLOWED",
+                    score=1,
+                ),
+            )
+        )
+
+        client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
+        client.detect(
+            "tool input",
+            agent=AgentPayload(
+                framework="claude-code",
+                version="1.2.3",
+                session_id="sess_contract",
+                trace_id="trace_contract",
+                hook_event="pre_tool",
+                mcp_server="filesystem",
+            ),
+            tool=ToolPayload(
+                name="Bash",
+                id="tool_1",
+                vendor="anthropic",
+                args={"command": "ls -la"},
+            ),
+            conversation=[
+                ConversationMessagePayload(role="user", content="List files"),
+                ConversationMessagePayload(role="tool", content="file.txt", tool_name="Bash"),
+            ],
+        )
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["agent"] == {
+            "framework": "claude-code",
+            "version": "1.2.3",
+            "sessionId": "sess_contract",
+            "traceId": "trace_contract",
+            "hookEvent": "pre_tool",
+            "mcpServer": "filesystem",
+        }
+        assert body["tool"]["name"] == "Bash"
+        assert body["tool"]["id"] == "tool_1"
+        assert body["tool"]["args"]["command"] == "ls -la"
+        assert body["conversation"][0]["role"] == "user"
+        assert body["conversation"][1]["toolName"] == "Bash"
+
+    @pytest.mark.asyncio
+    async def test_async_analyze_supports_new_source_values(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
+        """Async analyze request serializes the new source enum values."""
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/analyze").mock(
+            return_value=Response(
+                200,
+                json=build_detection_response(
+                    requestId="req_contract_typed_analyze",
+                    decision="ALLOWED",
+                    score=2,
+                ),
+            )
+        )
+
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            await client.analyze(
+                "system instruction",
+                Source.SYSTEM_PROMPT,
+                conversation=[
+                    ConversationMessagePayload(role="system", content="You are a secure agent."),
+                ],
+            )
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["source"] == "system_prompt"
+        assert body["conversation"][0]["role"] == "system"
 
 
 class TestBatchResponseContract:

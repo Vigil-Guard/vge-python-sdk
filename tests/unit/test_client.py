@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 import respx
 from conftest import build_detection_response
 from httpx import Response
 
 from vigil import (
+    AgentPayload,
     BatchItem,
+    ConversationMessagePayload,
     Decision,
     Source,
+    ToolPayload,
     Vigil,
+    VigilClientVersionError,
     VigilConfigurationError,
     VigilLicenseExpiredError,
     VigilLicenseRequiredError,
@@ -232,6 +238,101 @@ class TestVigilAnalyze:
         request = route.calls[0].request
         assert b'"source":"model_output"' in request.content
 
+    def test_analyze_with_metadata_remains_backward_compatible(
+        self, respx_mock: respx.MockRouter, client: Vigil
+    ) -> None:
+        """Analyze still supports legacy metadata-only callers."""
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/analyze").mock(
+            return_value=Response(
+                200,
+                json=build_detection_response(
+                    requestId="req_analyze_legacy",
+                    decision="ALLOWED",
+                    score=12,
+                ),
+            )
+        )
+
+        client.analyze("legacy text", Source.MODEL_OUTPUT, metadata={"trace_id": "legacy-1"})
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["source"] == "model_output"
+        assert body["metadata"]["trace_id"] == "legacy-1"
+        assert "agent" not in body
+        assert "tool" not in body
+        assert "conversation" not in body
+
+    def test_analyze_with_typed_payloads(self, respx_mock: respx.MockRouter, client: Vigil) -> None:
+        """Analyze serializes typed agent/tool/conversation payloads."""
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/analyze").mock(
+            return_value=Response(
+                200,
+                json=build_detection_response(
+                    requestId="req_analyze_typed",
+                    decision="ALLOWED",
+                    score=8,
+                ),
+            )
+        )
+
+        client.analyze(
+            "ls -la",
+            Source.TOOL_INPUT,
+            agent=AgentPayload(framework="claude-code", session_id="sess_1"),
+            tool=ToolPayload(
+                name="Bash",
+                vendor="anthropic",
+                args={"command": "ls -la"},
+            ),
+            conversation=[
+                ConversationMessagePayload(role="system", content="You are a CLI agent."),
+                ConversationMessagePayload(
+                    role="tool",
+                    content="total 4",
+                    tool_name="Bash",
+                    tool_id="toolu_123",
+                ),
+            ],
+        )
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["source"] == "tool_input"
+        assert body["agent"]["framework"] == "claude-code"
+        assert body["agent"]["sessionId"] == "sess_1"
+        assert body["tool"]["name"] == "Bash"
+        assert body["tool"]["vendor"] == "anthropic"
+        assert body["tool"]["args"]["command"] == "ls -la"
+        assert body["conversation"][0]["role"] == "system"
+        assert body["conversation"][1]["toolName"] == "Bash"
+        assert body["conversation"][1]["toolId"] == "toolu_123"
+
+    def test_analyze_raises_client_version_error_for_pre_prd29_server(
+        self, respx_mock: respx.MockRouter, client: Vigil
+    ) -> None:
+        """Typed analyze requests raise a friendly compatibility error on old servers."""
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/analyze").mock(
+            return_value=Response(
+                400,
+                json={
+                    "error": "Validation failed",
+                    "details": [
+                        {"path": "source", "message": "Invalid enum value 'tool_input'"},
+                        {"path": "agent.framework", "message": "Unexpected field"},
+                    ],
+                },
+            )
+        )
+
+        with pytest.raises(
+            VigilClientVersionError,
+            match="PRD_29-compatible server",
+        ):
+            client.analyze(
+                "ls -la",
+                Source.TOOL_INPUT,
+                agent=AgentPayload(framework="claude-code"),
+            )
+
 
 class TestVigilBatch:
     """Tests for batch() method."""
@@ -331,6 +432,50 @@ class TestVigilBatch:
 
         indices = [item.index for item in result]
         assert indices == [0, 1]
+
+    def test_batch_serializes_typed_fields(self, respx_mock: respx.MockRouter, client: Vigil) -> None:
+        """Batch items preserve typed payload fields."""
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/batch").mock(
+            return_value=Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "index": 0,
+                            "ok": True,
+                            "response": build_detection_response(
+                                requestId="req_batch_typed",
+                                decision="ALLOWED",
+                                score=3,
+                            ),
+                        }
+                    ]
+                },
+            )
+        )
+
+        client.batch(
+            [
+                BatchItem(
+                    text="tool output",
+                    source=Source.TOOL_OUTPUT,
+                    metadata={"trace_id": "batch-1"},
+                    agent=AgentPayload(framework="openai-agents", trace_id="trace_1"),
+                    tool=ToolPayload(name="WebFetch", vendor="openai"),
+                    conversation=[
+                        ConversationMessagePayload(role="assistant", content="Calling tool"),
+                    ],
+                )
+            ]
+        )
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["items"][0]["source"] == "tool_output"
+        assert body["items"][0]["metadata"]["trace_id"] == "batch-1"
+        assert body["items"][0]["agent"]["framework"] == "openai-agents"
+        assert body["items"][0]["agent"]["traceId"] == "trace_1"
+        assert body["items"][0]["tool"]["name"] == "WebFetch"
+        assert body["items"][0]["conversation"][0]["role"] == "assistant"
 
 
 class TestVigilWithOptions:
