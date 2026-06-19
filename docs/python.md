@@ -3,7 +3,7 @@
 Official Python SDK for integrating with Vigil Guard prompt injection detection API (self-hosted).
 
 **Package:** `vigil-guard`
-**Version:** 1.0.0
+**Version:** 1.8.0
 **Python:** 3.9+
 **License:** MIT
 
@@ -12,19 +12,19 @@ Official Python SDK for integrating with Vigil Guard prompt injection detection 
 ## Installation
 
 ```bash
-pip install vigil-guard
+pip install "vigil-guard @ git+https://github.com/Vigil-Guard/vge-python-sdk.git"
 ```
 
 With Poetry:
 
 ```bash
-poetry add vigil-guard
+poetry add "git+https://github.com/Vigil-Guard/vge-python-sdk.git"
 ```
 
 With uv:
 
 ```bash
-uv add vigil-guard
+uv add "vigil-guard @ git+https://github.com/Vigil-Guard/vge-python-sdk.git"
 ```
 
 ---
@@ -247,8 +247,10 @@ def analyze(
 **Source Values:**
 
 - `Source.USER_INPUT` - Direct user input
-- `Source.MODEL_OUTPUT` - LLM generated content
+- `Source.TOOL_INPUT` - Tool/function call input
 - `Source.TOOL_OUTPUT` - Tool/function call output
+- `Source.MODEL_OUTPUT` - LLM generated content
+- `Source.SYSTEM_PROMPT` - System/developer instruction content
 
 The backend accepts and propagates `source` today, but current scoring and rule evaluation do
 not branch on it yet.
@@ -278,7 +280,8 @@ def batch(
 
 **Parameters:**
 
-- `items` - List of `BatchItem` objects (required, max 100)
+- `items` - List of `BatchItem` objects (required, max 24 by schema; the
+  deployment-specific `maxSafeItems` budget may be lower)
 - `timeout` - Override request timeout (optional)
 - `idempotency_key` - Idempotency key header (auto-generated if not provided)
 
@@ -525,9 +528,20 @@ class ThreatLevel(str, Enum):
 
 ```python
 class Source(str, Enum):
-    USER_INPUT = "user_input"    # Direct user input
-    TOOL_OUTPUT = "tool_output"  # Tool/function output
+    USER_INPUT = "user_input"      # Direct user input
+    TOOL_INPUT = "tool_input"      # Tool/function call input
+    TOOL_OUTPUT = "tool_output"    # Tool/function output
     MODEL_OUTPUT = "model_output"  # LLM generated content
+    SYSTEM_PROMPT = "system_prompt"  # System/developer instruction content
+```
+
+### Contract Constants
+
+```python
+MIN_TEXT_LENGTH = 1
+MAX_TEXT_LENGTH = 100_000
+MAX_BATCH_ITEMS = 24
+MAX_METADATA_BYTES = 16 * 1024
 ```
 
 ---
@@ -553,6 +567,21 @@ VigilError (base)
 └── VigilBatchPartialFailure   # Partial batch failure
 ```
 
+The SDK retries retryable failures within its configured retry budget. After the
+budget is exhausted, guarded content paths should fail closed:
+
+```python
+from vigil import should_fail_closed
+
+try:
+    result = client.detect(user_input)
+except Exception as exc:
+    if should_fail_closed(exc):
+        block_or_hold_request()
+        return
+    raise
+```
+
 ### Exception Attributes
 
 **VigilError (base):**
@@ -571,6 +600,8 @@ VigilError (base)
 **VigilValidationError:**
 
 - `errors` - List of `{path, message}` dicts
+- `max_safe_items` - Deployment-specific safe batch size when the API returns a
+  1.8 batch budget error; otherwise `None`
 
 **VigilServiceError:**
 
@@ -624,6 +655,7 @@ from vigil import (
     VigilConnectionError,
     VigilTimeoutError,
     VigilRetryBudgetExceeded,
+    should_fail_closed,
     VigilError,
 )
 
@@ -640,14 +672,10 @@ except VigilValidationError as e:
         print(f"{err['path']}: {err['message']}")
 except VigilRateLimitError as e:
     print(f"Rate limited. Retry after {e.retry_after}s")
-except VigilServiceError as e:
-    print(f"Service unavailable: {e.status_code}")
-except VigilConnectionError as e:
-    print(f"Network error: {e.message}")
-except VigilTimeoutError as e:
-    print(f"Timeout: {e.timeout}s")
-except VigilRetryBudgetExceeded as e:
-    print(f"Retry budget exceeded after {e.elapsed}s")
+except (VigilServiceError, VigilConnectionError, VigilTimeoutError, VigilRetryBudgetExceeded) as e:
+    if should_fail_closed(e):
+        block_or_hold_request()
+        return
 except VigilError as e:
     print(f"Error: {e}")
 ```
@@ -821,5 +849,5 @@ src/vigil/
 
 ---
 
-**Last Updated:** 2026-02-06
-**SDK Version:** 1.0.0
+**Last Updated:** 2026-06-19
+**SDK Version:** 1.8.0

@@ -10,6 +10,8 @@ from conftest import build_detection_response
 from httpx import Response
 
 from vigil import (
+    MAX_BATCH_ITEMS,
+    MAX_METADATA_BYTES,
     AgentPayload,
     BatchItem,
     ConversationMessagePayload,
@@ -21,6 +23,7 @@ from vigil import (
     VigilConfigurationError,
     VigilLicenseExpiredError,
     VigilLicenseRequiredError,
+    VigilValidationError,
 )
 
 DUMMY_BASE_URL = "https://api.vigilguard.test.local"
@@ -398,7 +401,7 @@ class TestVigilBatch:
             )
         )
 
-        items = [BatchItem(text="OK"), BatchItem(text="x" * 100001)]
+        items = [BatchItem(text="OK"), BatchItem(text="Server-side failure")]
         result = client.batch(items)
 
         assert result.has_failures is True
@@ -476,6 +479,52 @@ class TestVigilBatch:
         assert body["items"][0]["agent"]["traceId"] == "trace_1"
         assert body["items"][0]["tool"]["name"] == "WebFetch"
         assert body["items"][0]["conversation"][0]["role"] == "assistant"
+
+    def test_batch_rejects_more_than_static_contract_cap(self, client: Vigil) -> None:
+        """SDK mirrors the v1.8 static /v1/guard/batch cap."""
+        with pytest.raises(VigilValidationError) as exc_info:
+            client.batch([BatchItem(text=f"Item {i}") for i in range(MAX_BATCH_ITEMS + 1)])
+
+        assert exc_info.value.errors[0]["path"] == "items"
+        assert str(MAX_BATCH_ITEMS) in exc_info.value.errors[0]["message"]
+
+    def test_batch_rejects_empty_text(self, client: Vigil) -> None:
+        """SDK mirrors the 1-100000 text length contract."""
+        with pytest.raises(VigilValidationError) as exc_info:
+            client.batch([BatchItem(text="")])
+
+        assert exc_info.value.errors[0]["path"] == "items[].text"
+
+    def test_batch_rejects_metadata_over_16k(self, client: Vigil) -> None:
+        """SDK mirrors the v1.8 serialized metadata byte cap."""
+        metadata = {"payload": "x" * MAX_METADATA_BYTES}
+
+        with pytest.raises(VigilValidationError) as exc_info:
+            client.batch([BatchItem(text="ok", metadata=metadata)])
+
+        assert exc_info.value.errors[0]["path"] == "items[].metadata"
+        assert str(MAX_METADATA_BYTES) in exc_info.value.errors[0]["message"]
+
+    def test_batch_budget_error_exposes_max_safe_items(
+        self, respx_mock: respx.MockRouter, client: Vigil
+    ) -> None:
+        """v1.8 batch budget errors expose maxSafeItems for split-and-retry clients."""
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/batch").mock(
+            return_value=Response(
+                400,
+                json={
+                    "error": "Batch too large for configured timeout budget",
+                    "maxSafeItems": 8,
+                    "requestId": "req_budget",
+                },
+            )
+        )
+
+        with pytest.raises(VigilValidationError) as exc_info:
+            client.batch([BatchItem(text=f"Item {i}") for i in range(9)])
+
+        assert exc_info.value.max_safe_items == 8
+        assert exc_info.value.request_id == "req_budget"
 
 
 class TestVigilWithOptions:

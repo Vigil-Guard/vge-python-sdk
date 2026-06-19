@@ -10,6 +10,7 @@ from conftest import build_detection_response
 from httpx import Response
 
 from vigil import (
+    MAX_BATCH_ITEMS,
     AgentPayload,
     AsyncVigil,
     BatchItem,
@@ -19,6 +20,7 @@ from vigil import (
     ToolPayload,
     VigilClientVersionError,
     VigilConfigurationError,
+    VigilValidationError,
 )
 
 DUMMY_BASE_URL = "https://api.vigilguard.test.local"
@@ -404,7 +406,7 @@ class TestAsyncVigilBatch:
         )
 
         async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
-            items = [BatchItem(text="OK"), BatchItem(text="x" * 100001)]
+            items = [BatchItem(text="OK"), BatchItem(text="Server-side failure")]
             result = await client.batch(items)
 
         assert result.has_failures is True
@@ -455,6 +457,40 @@ class TestAsyncVigilBatch:
         assert body["items"][0]["agent"]["traceId"] == "trace_async"
         assert body["items"][0]["tool"]["name"] == "WebFetch"
         assert body["items"][0]["conversation"][0]["role"] == "assistant"
+
+    @pytest.mark.asyncio
+    async def test_batch_rejects_more_than_static_contract_cap(self) -> None:
+        """Async SDK mirrors the v1.8 static /v1/guard/batch cap."""
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            with pytest.raises(VigilValidationError) as exc_info:
+                await client.batch(
+                    [BatchItem(text=f"Item {i}") for i in range(MAX_BATCH_ITEMS + 1)]
+                )
+
+        assert exc_info.value.errors[0]["path"] == "items"
+
+    @pytest.mark.asyncio
+    async def test_batch_budget_error_exposes_max_safe_items(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
+        """Async v1.8 batch budget errors expose maxSafeItems."""
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/batch").mock(
+            return_value=Response(
+                400,
+                json={
+                    "error": "Batch too large for configured timeout budget",
+                    "maxSafeItems": 8,
+                    "requestId": "req_async_budget",
+                },
+            )
+        )
+
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            with pytest.raises(VigilValidationError) as exc_info:
+                await client.batch([BatchItem(text=f"Item {i}") for i in range(9)])
+
+        assert exc_info.value.max_safe_items == 8
+        assert exc_info.value.request_id == "req_async_budget"
 
 
 class TestAsyncVigilWithOptions:

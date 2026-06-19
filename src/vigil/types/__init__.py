@@ -20,7 +20,17 @@ from .branches import (
     SemanticBranch,
 )
 from .enums import Decision, Source, ThreatLevel
-from .requests import AgentPayload, ConversationMessagePayload, ToolPayload, ToolResultPayload
+from .requests import (
+    MAX_BATCH_ITEMS,
+    MAX_METADATA_BYTES,
+    MAX_TEXT_LENGTH,
+    MIN_TEXT_LENGTH,
+    AgentPayload,
+    BatchItem,
+    ConversationMessagePayload,
+    ToolPayload,
+    ToolResultPayload,
+)
 from .responses import (
     BatchItemError,
     BatchItemResult,
@@ -40,6 +50,11 @@ __all__ = [
     "ToolPayload",
     "ToolResultPayload",
     "ConversationMessagePayload",
+    "BatchItem",
+    "MIN_TEXT_LENGTH",
+    "MAX_TEXT_LENGTH",
+    "MAX_BATCH_ITEMS",
+    "MAX_METADATA_BYTES",
     # Response models
     "DetectionResult",
     "BatchResult",

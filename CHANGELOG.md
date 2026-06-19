@@ -7,16 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-06-19
+
 ### Added
 
 - Typed `agent`, `tool`, and `conversation` request helpers for sync and async clients
 - New `Source` values: `tool_input` and `system_prompt`
 - Friendly compatibility error when typed requests target a pre-PRD_29 server
+- Exported API contract constants: `MIN_TEXT_LENGTH`, `MAX_TEXT_LENGTH`,
+  `MAX_BATCH_ITEMS`, and `MAX_METADATA_BYTES`
+- Added `should_fail_closed(error)` helper for the Vigil Guard 1.8
+  retry-then-block/hold contract on 503, timeout, transport, and retry-budget
+  failures.
 
 ### Compatibility
 
 - Typed `agent` / `tool` / `conversation` parameters require Vigil Guard server with PRD_29 Phase 1 deployed.
 - Legacy `metadata=`-only calls remain compatible with earlier server versions.
+
+### Changed
+
+- Synced `/v1/guard/batch` with the Vigil Guard 1.8 contract: static SDK cap is
+  24 items, metadata is capped at 16 KiB serialized, and text fields are
+  validated as 1-100,000 characters before sending.
+- `VigilValidationError` now exposes `max_safe_items` when a 1.8 server returns
+  a deployment-specific batch budget error.
 
 ## [1.0.3] - 2026-02-16
 

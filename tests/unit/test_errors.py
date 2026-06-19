@@ -19,6 +19,7 @@ from vigil import (
     VigilServiceError,
     VigilTimeoutError,
     VigilValidationError,
+    should_fail_closed,
 )
 from vigil._errors import _raise_for_status, _should_retry
 
@@ -288,6 +289,20 @@ class TestRaiseForStatus:
         assert exc_info.value.status_code == 400
         assert exc_info.value.request_id == "req_123"
 
+    def test_400_batch_budget_error_exposes_max_safe_items(self) -> None:
+        with pytest.raises(VigilValidationError) as exc_info:
+            _raise_for_status(
+                400,
+                {
+                    "error": "Batch too large for configured timeout budget",
+                    "maxSafeItems": 8,
+                },
+                "req_budget",
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.max_safe_items == 8
+
     def test_401_raises_auth_error(self) -> None:
         with pytest.raises(VigilAuthenticationError) as exc_info:
             _raise_for_status(401, {"error": "Unauthorized"}, "req_123")
@@ -388,6 +403,7 @@ class TestShouldRetry:
     def test_validation_error_not_retryable(self) -> None:
         assert _should_retry(VigilValidationError("Bad input")) is False
 
+
     def test_api_error_not_retryable(self) -> None:
         assert _should_retry(VigilAPIError("Not found", status_code=404)) is False
 
@@ -401,3 +417,23 @@ class TestShouldRetry:
     def test_unknown_4xx_not_retryable(self) -> None:
         err = VigilError("Unknown", status_code=418)
         assert _should_retry(err) is False
+
+
+@pytest.mark.unit
+class TestShouldFailClosed:
+    """Tests for public fail-closed helper."""
+
+    def test_transport_and_service_fail_closed(self) -> None:
+        assert should_fail_closed(VigilConnectionError("Network error")) is True
+        assert should_fail_closed(VigilTimeoutError("Timeout")) is True
+        assert should_fail_closed(VigilServiceError("Service down")) is True
+        assert (
+            should_fail_closed(
+                VigilRetryBudgetExceeded(retry_budget=1.0, elapsed=1.0, next_delay=1.0)
+            )
+            is True
+        )
+
+    def test_client_errors_do_not_imply_fail_closed(self) -> None:
+        assert should_fail_closed(VigilValidationError("Bad input")) is False
+        assert should_fail_closed(VigilAuthenticationError("Bad key")) is False

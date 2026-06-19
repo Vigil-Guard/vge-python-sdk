@@ -178,7 +178,7 @@ class TestErrorHandlingFlow:
         client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
 
         with pytest.raises(VigilValidationError) as exc_info:
-            client.detect("")
+            client.detect("server-side validation failure")
 
         assert len(route.calls) == 1
         assert len(exc_info.value.errors) == 1
@@ -321,7 +321,7 @@ class TestBatchProcessing:
         client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
         items = [
             BatchItem(text="OK"),
-            BatchItem(text="x" * 100001),
+            BatchItem(text="Server-side failure"),
             BatchItem(text="Also OK"),
         ]
         result = client.batch(items)

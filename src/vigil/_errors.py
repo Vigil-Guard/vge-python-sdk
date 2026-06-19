@@ -139,11 +139,13 @@ class VigilValidationError(VigilError):
         message: str = "Validation failed",
         *,
         errors: Optional[List[Dict[str, Any]]] = None,
+        max_safe_items: Optional[int] = None,
         status_code: int = 400,
         **kwargs: Any,
     ) -> None:
         super().__init__(message, status_code=status_code, **kwargs)
         self.errors: List[Dict[str, Any]] = errors or []
+        self.max_safe_items = max_safe_items
 
     def __str__(self) -> str:
         base = super().__str__()
@@ -279,6 +281,9 @@ def _raise_for_status(
         raise VigilValidationError(
             message,
             errors=body.get("details", []),
+            max_safe_items=(
+                body["maxSafeItems"] if isinstance(body.get("maxSafeItems"), int) else None
+            ),
             **common,
         )
 
@@ -368,3 +373,22 @@ def _should_retry(error: VigilError) -> bool:
 
     # Unknown errors with 5xx status - retry
     return error.status_code is not None and error.status_code >= 500
+
+
+def should_fail_closed(error: BaseException) -> bool:
+    """
+    Return True when callers should block or hold the guarded request.
+
+    Vigil Guard 1.8 treats 503 shed responses, transport failures, request
+    timeouts, and exhausted retry budgets as fail-closed conditions for guarded
+    content paths.
+    """
+    return isinstance(
+        error,
+        (
+            VigilConnectionError,
+            VigilRetryBudgetExceeded,
+            VigilServiceError,
+            VigilTimeoutError,
+        ),
+    )

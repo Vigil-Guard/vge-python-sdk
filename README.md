@@ -2,15 +2,15 @@
 
 Official Python SDK for Vigil Guard prompt injection detection API (self-hosted deployments).
 
-[![PyPI version](https://badge.fury.io/py/vigil-guard.svg)](https://pypi.org/project/vigil-guard/)
+[![SDK 1.8.0](https://img.shields.io/badge/SDK-1.8.0-blue.svg)](CHANGELOG.md)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/Vigil-Guard/python-SDK-vge/actions/workflows/test.yml/badge.svg)](https://github.com/Vigil-Guard/python-SDK-vge/actions)
+[![CI](https://github.com/Vigil-Guard/vge-python-sdk/actions/workflows/test.yml/badge.svg)](https://github.com/Vigil-Guard/vge-python-sdk/actions)
 
 ## Installation
 
 ```bash
-pip install vigil-guard
+pip install "vigil-guard @ git+https://github.com/Vigil-Guard/vge-python-sdk.git"
 ```
 
 ## Quick Start
@@ -156,11 +156,17 @@ from vigil import Source
 # For user input
 result = client.analyze(text, Source.USER_INPUT)
 
-# For LLM output
-result = client.analyze(text, Source.MODEL_OUTPUT)
+# For tool/function call input
+result = client.analyze(text, Source.TOOL_INPUT)
 
 # For tool/function call output
 result = client.analyze(text, Source.TOOL_OUTPUT)
+
+# For LLM output
+result = client.analyze(text, Source.MODEL_OUTPUT)
+
+# For system/developer instruction content
+result = client.analyze(text, Source.SYSTEM_PROMPT)
 ```
 
 The backend accepts and propagates `source` today, but current scoring and rule evaluation do
@@ -168,7 +174,9 @@ not branch on it yet.
 
 ### batch(items)
 
-Process multiple texts in a single request.
+Process multiple texts in a single request. The SDK mirrors the Vigil Guard 1.8
+contract: 1-24 items per request by schema, with a deployment-specific
+`maxSafeItems` budget that may be lower.
 
 ```python
 from vigil import BatchItem, Source
@@ -199,6 +207,10 @@ failed = result.failed_items()
 # Raise exception if any failed
 result.raise_for_failures()  # Raises VigilBatchPartialFailure
 ```
+
+If a server rejects a batch because the deployment budget is lower than the
+static schema cap, catch `VigilValidationError` and inspect `e.max_safe_items`
+to split and retry safely.
 
 ## Response Objects
 
@@ -250,10 +262,14 @@ from vigil import (
     VigilTimeoutError,
     VigilRetryBudgetExceeded,
     VigilBatchPartialFailure,
+    should_fail_closed,
 )
 
 try:
     result = client.detect(text)
+except (VigilServiceError, VigilConnectionError, VigilTimeoutError, VigilRetryBudgetExceeded) as e:
+    if should_fail_closed(e):
+        print("Guard unavailable after retry budget; block or hold this request")
 except VigilAuthenticationError:
     print("Invalid API key")
 except VigilLicenseExpiredError:
@@ -264,14 +280,6 @@ except VigilValidationError as e:
     print(f"Validation failed: {e.errors}")
 except VigilRateLimitError as e:
     print(f"Rate limited. Retry after {e.retry_after}s")
-except VigilServiceError:
-    print("API server error")
-except VigilConnectionError:
-    print("Network error")
-except VigilTimeoutError:
-    print("Request timed out")
-except VigilRetryBudgetExceeded as e:
-    print(f"Retry budget exceeded: {e}")
 except VigilBatchPartialFailure as e:
     print(f"Batch partial failure: {e.successful}, {e.failed}")
 except VigilError as e:

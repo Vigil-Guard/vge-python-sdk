@@ -48,9 +48,14 @@ from ._errors import (
     VigilServiceError,
     VigilTimeoutError,
     VigilValidationError,
+    should_fail_closed,
 )
 from ._version import __version__
 from .types import (
+    MAX_BATCH_ITEMS,
+    MAX_METADATA_BYTES,
+    MAX_TEXT_LENGTH,
+    MIN_TEXT_LENGTH,
     AgentPayload,
     ConversationMessagePayload,
     Decision,
@@ -86,6 +91,7 @@ __all__ = [
     "VigilTimeoutError",
     "VigilRetryBudgetExceeded",
     "VigilBatchPartialFailure",
+    "should_fail_closed",
     # Types
     "Decision",
     "ThreatLevel",
@@ -94,6 +100,10 @@ __all__ = [
     "ToolPayload",
     "ToolResultPayload",
     "ConversationMessagePayload",
+    "MIN_TEXT_LENGTH",
+    "MAX_TEXT_LENGTH",
+    "MAX_BATCH_ITEMS",
+    "MAX_METADATA_BYTES",
     # Request/Response Models
     "BatchItem",
     "DetectionResult",

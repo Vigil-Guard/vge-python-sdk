@@ -53,9 +53,9 @@ release = [
 [project.urls]
 Homepage = "https://www.vigilguard.ai"
 Documentation = "https://www.vigilguard.ai"
-Repository = "https://github.com/Vigil-Guard/python-SDK-vge"
-Changelog = "https://github.com/Vigil-Guard/python-SDK-vge/blob/main/CHANGELOG.md"
-"Bug Tracker" = "https://github.com/Vigil-Guard/python-SDK-vge/issues"
+Repository = "https://github.com/Vigil-Guard/vge-python-sdk"
+Changelog = "https://github.com/Vigil-Guard/vge-python-sdk/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/Vigil-Guard/vge-python-sdk/issues"
 
 [tool.hatch.version]
 path = "src/vigil/_version.py"

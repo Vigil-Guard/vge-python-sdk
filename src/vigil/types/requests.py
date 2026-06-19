@@ -7,10 +7,17 @@ remain internal implementation details used by the sync and async clients.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from .._errors import VigilValidationError
 from .enums import Source
+
+MIN_TEXT_LENGTH = 1
+MAX_TEXT_LENGTH = 100_000
+MAX_BATCH_ITEMS = 24
+MAX_METADATA_BYTES = 16 * 1024
 
 
 @dataclass
@@ -118,6 +125,8 @@ class GuardInputPayload:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API request body."""
+        _validate_text("prompt", self.prompt)
+        _validate_metadata(self.metadata)
         result: Dict[str, Any] = {
             "prompt": self.prompt,
             "mode": "full",
@@ -146,6 +155,9 @@ class GuardOutputPayload:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API request body."""
+        _validate_text("output", self.output)
+        _validate_text("originalPrompt", self.original_prompt, required=False)
+        _validate_metadata(self.metadata)
         result: Dict[str, Any] = {
             "output": self.output,
             "mode": "full",
@@ -176,6 +188,8 @@ class GuardAnalyzePayload:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API request body."""
+        _validate_text("text", self.text)
+        _validate_metadata(self.metadata)
         result: Dict[str, Any] = {
             "text": self.text,
             "source": self.source.value,
@@ -205,6 +219,8 @@ class BatchItem:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API request item."""
+        _validate_text("items[].text", self.text)
+        _validate_metadata(self.metadata, path="items[].metadata")
         result: Dict[str, Any] = {
             "text": self.text,
             "source": self.source.value,
@@ -229,4 +245,57 @@ class BatchPayload:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API request body."""
+        count = len(self.items)
+        if count < 1 or count > MAX_BATCH_ITEMS:
+            _raise_validation_error(
+                "items",
+                f"batch items must contain 1-{MAX_BATCH_ITEMS} entries",
+            )
         return {"items": [item.to_dict() for item in self.items]}
+
+
+def _validate_text(path: str, value: Optional[str], *, required: bool = True) -> None:
+    if value is None:
+        if required:
+            _raise_validation_error(path, f"{path} is required")
+        return
+    length = len(value)
+    if length < MIN_TEXT_LENGTH or length > MAX_TEXT_LENGTH:
+        _raise_validation_error(
+            path,
+            f"{path} must be {MIN_TEXT_LENGTH}-{MAX_TEXT_LENGTH} characters",
+        )
+
+
+def _validate_metadata(metadata: Dict[str, Any], *, path: str = "metadata") -> None:
+    if not metadata:
+        return
+    size = _stable_serialized_bytes(metadata)
+    if size > MAX_METADATA_BYTES:
+        _raise_validation_error(
+            path,
+            f"{path} exceeds {MAX_METADATA_BYTES} bytes when serialized",
+        )
+
+
+def _stable_serialized_bytes(value: Any) -> int:
+    try:
+        serialized = json.dumps(
+            value,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    except (TypeError, ValueError) as exc:
+        raise VigilValidationError(
+            "metadata must be JSON serializable",
+            errors=[{"path": "metadata", "message": "metadata must be JSON serializable"}],
+        ) from exc
+    return len(serialized.encode("utf-8"))
+
+
+def _raise_validation_error(path: str, message: str) -> None:
+    raise VigilValidationError(
+        message,
+        errors=[{"path": path, "message": message}],
+    )

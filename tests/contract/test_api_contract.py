@@ -21,8 +21,8 @@ from vigil import (
     ConversationMessagePayload,
     Decision,
     Source,
-    ToolPayload,
     ThreatLevel,
+    ToolPayload,
     Vigil,
     VigilAuthenticationError,
     VigilRateLimitError,
@@ -440,7 +440,7 @@ class TestBatchResponseContract:
         )
 
         client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
-        items = [BatchItem(text="ok"), BatchItem(text="x" * 200000), BatchItem(text="\xff")]
+        items = [BatchItem(text="ok"), BatchItem(text="server failure"), BatchItem(text="\xff")]
         result = client.batch(items)
 
         assert result.has_failures is True
@@ -494,7 +494,7 @@ class TestErrorResponseContract:
         client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
 
         with pytest.raises(VigilValidationError) as exc_info:
-            client.detect("")
+            client.detect("server-side validation failure")
 
         assert len(exc_info.value.errors) == 2
         assert exc_info.value.errors[0]["path"] == "prompt"
