@@ -796,7 +796,7 @@ class TestVigilOpaqueResponses:
         assert result.diagnostics_available is False
 
     def test_batch_with_opaque_items(self, respx_mock: respx.MockRouter, client: Vigil) -> None:
-        """Batch items reuse the same model: opaque and full items coexist."""
+        """Batch items reuse the same model: every opaque decision and a full item coexist."""
         respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/batch").mock(
             return_value=Response(
                 200,
@@ -805,10 +805,27 @@ class TestVigilOpaqueResponses:
                         {
                             "index": 0,
                             "ok": True,
-                            "response": build_opaque_response(decision="BLOCKED"),
+                            "response": build_opaque_response(decision="ALLOWED"),
                         },
                         {
                             "index": 1,
+                            "ok": True,
+                            "response": build_opaque_response(decision="BLOCKED"),
+                        },
+                        {
+                            "index": 2,
+                            "ok": True,
+                            "response": build_opaque_response(decision="SANITIZED"),
+                        },
+                        {
+                            "index": 3,
+                            "ok": True,
+                            "response": build_opaque_response(
+                                decision="SANITIZED", sanitizedText="masked"
+                            ),
+                        },
+                        {
+                            "index": 4,
                             "ok": True,
                             "response": build_detection_response(requestId="req_full"),
                         },
@@ -817,14 +834,26 @@ class TestVigilOpaqueResponses:
             )
         )
 
-        result = client.batch([BatchItem(text="evil"), BatchItem(text="fine")])
+        result = client.batch(
+            [
+                BatchItem(text="fine"),
+                BatchItem(text="evil"),
+                BatchItem(text="pii"),
+                BatchItem(text="pii2"),
+                BatchItem(text="full"),
+            ]
+        )
         assert result.all_succeeded is True
-        first = result[0].response
-        assert first is not None
-        assert first.diagnostics_available is False
-        second = result[1].response
-        assert second is not None
-        assert second.diagnostics_available is True
+        allowed, blocked, sanitized, sanitized_text, full = (item.response for item in result)
+        assert allowed is not None and allowed.is_safe is True
+        assert blocked is not None and blocked.is_blocked is True
+        assert sanitized is not None and sanitized.is_sanitized is True
+        assert sanitized.sanitized_text is None
+        assert sanitized_text is not None and sanitized_text.sanitized_text == "masked"
+        for opaque_item in (allowed, blocked, sanitized, sanitized_text):
+            assert opaque_item.diagnostics_available is False
+        assert full is not None
+        assert full.diagnostics_available is True
 
     def test_detect_partial_profile_raises(
         self, respx_mock: respx.MockRouter, client: Vigil

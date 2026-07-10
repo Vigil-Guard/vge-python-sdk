@@ -578,7 +578,20 @@ class TestAsyncVigilOpaqueResponses:
         assert result.is_sanitized is True
         assert result.sanitized_text is None
 
+    async def test_detect_opaque_sanitized_with_text(self, respx_mock: respx.MockRouter) -> None:
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(
+                200, json=build_opaque_response(decision="SANITIZED", sanitizedText="masked ***")
+            )
+        )
+
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            result = await client.detect("My email is test@example.com")
+        assert result.is_sanitized is True
+        assert result.sanitized_text == "masked ***"
+
     async def test_batch_with_opaque_items(self, respx_mock: respx.MockRouter) -> None:
+        """Async batch parses every opaque decision alongside a full item."""
         respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/batch").mock(
             return_value=Response(
                 200,
@@ -587,10 +600,20 @@ class TestAsyncVigilOpaqueResponses:
                         {
                             "index": 0,
                             "ok": True,
-                            "response": build_opaque_response(decision="SANITIZED"),
+                            "response": build_opaque_response(decision="ALLOWED"),
                         },
                         {
                             "index": 1,
+                            "ok": True,
+                            "response": build_opaque_response(decision="BLOCKED"),
+                        },
+                        {
+                            "index": 2,
+                            "ok": True,
+                            "response": build_opaque_response(decision="SANITIZED"),
+                        },
+                        {
+                            "index": 3,
                             "ok": True,
                             "response": build_detection_response(requestId="req_full"),
                         },
@@ -600,11 +623,23 @@ class TestAsyncVigilOpaqueResponses:
         )
 
         async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
-            result = await client.batch([BatchItem(text="a"), BatchItem(text="b")])
+            result = await client.batch(
+                [
+                    BatchItem(text="a"),
+                    BatchItem(text="b"),
+                    BatchItem(text="c"),
+                    BatchItem(text="d"),
+                ]
+            )
         assert result.all_succeeded is True
-        first = result[0].response
-        assert first is not None
-        assert first.diagnostics_available is False
+        allowed, blocked, sanitized, full = (item.response for item in result)
+        assert allowed is not None and allowed.is_safe is True
+        assert blocked is not None and blocked.is_blocked is True
+        assert sanitized is not None and sanitized.is_sanitized is True
+        for opaque_item in (allowed, blocked, sanitized):
+            assert opaque_item.diagnostics_available is False
+        assert full is not None
+        assert full.diagnostics_available is True
 
     async def test_detect_partial_profile_raises(self, respx_mock: respx.MockRouter) -> None:
         respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(

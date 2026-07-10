@@ -6,7 +6,7 @@ import os
 from vigil import AsyncVigil, BatchItem, Source
 
 
-async def basic_async():
+async def basic_async() -> None:
     """Basic async detection."""
     async with AsyncVigil(
         api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
@@ -14,10 +14,11 @@ async def basic_async():
     ) as client:
         result = await client.detect("Please reset my password for account 18473")
         print(f"Decision: {result.decision}")
-        print(f"Score: {result.score}")
+        if result.diagnostics_available:
+            print(f"Score: {result.score}")
 
 
-async def concurrent_detection():
+async def concurrent_detection() -> None:
     """Process multiple texts concurrently."""
     async with AsyncVigil(
         api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
@@ -35,12 +36,11 @@ async def concurrent_detection():
 
         for text, result in zip(texts, results):
             status = "BLOCKED" if result.is_blocked else "OK"
-            print(
-                f"[{status}] {text[:30]}... (score: {result.score}, request_id={result.request_id})"
-            )
+            score = result.score if result.diagnostics_available else "withheld"
+            print(f"[{status}] {text[:30]}... (score: {score}, request_id={result.request_id})")
 
 
-async def async_batch():
+async def async_batch() -> None:
     """Process batch of texts."""
     async with AsyncVigil(
         api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
@@ -60,10 +60,11 @@ async def async_batch():
 
         for item in result:
             if item.success and item.result:
-                print(f"  [{item.index}] {item.result.decision} (score: {item.result.score})")
+                score = item.result.score if item.result.diagnostics_available else "withheld"
+                print(f"  [{item.index}] {item.result.decision} (score: {score})")
 
 
-async def output_detection():
+async def output_detection() -> None:
     """Detect issues in LLM output."""
     async with AsyncVigil(
         api_key=os.environ.get("VIGIL_GUARD_API_KEY", "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
@@ -80,7 +81,7 @@ async def output_detection():
         print(f"Output Decision: {result.decision}")
 
 
-async def main():
+async def main() -> None:
     """Run all async examples."""
     print("=== Basic Async ===")
     await basic_async()

@@ -2,7 +2,7 @@
 
 Official Python SDK for Vigil Guard prompt injection detection API (self-hosted deployments).
 
-[![SDK 1.8.0](https://img.shields.io/badge/SDK-1.8.0-blue.svg)](CHANGELOG.md)
+[![SDK 2.0.0](https://img.shields.io/badge/SDK-2.0.0-blue.svg)](CHANGELOG.md)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/Vigil-Guard/vge-python-sdk/actions/workflows/test.yml/badge.svg)](https://github.com/Vigil-Guard/vge-python-sdk/actions)
@@ -118,17 +118,20 @@ result = client.detect(
 )
 
 print(f"Decision: {result.decision}")      # ALLOWED, BLOCKED, SANITIZED
-print(f"Score: {result.score}")            # 0-100
-print(f"Threat Level: {result.threat_level}")  # LOW, MEDIUM, HIGH, CRITICAL
 print(f"Request ID: {result.request_id}")
 
-# Access branch details
-if result.branches.heuristics:
-    for explanation in result.branches.heuristics.explanations:
-        print(f"Heuristic: {explanation}")
+if result.diagnostics_available:
+    print(f"Score: {result.score}")            # 0-100
+    print(f"Threat Level: {result.threat_level}")  # LOW, MEDIUM, HIGH, CRITICAL
 
-if result.branches.pii and result.branches.pii.detected:
-    print(f"PII categories: {result.branches.pii.categories}")
+# Branch details are None on anti-recon opaque responses
+if result.branches is not None:
+    if result.branches.heuristics:
+        for explanation in result.branches.heuristics.explanations:
+            print(f"Heuristic: {explanation}")
+
+    if result.branches.pii and result.branches.pii.detected:
+        print(f"PII categories: {result.branches.pii.categories}")
 ```
 
 Note: the SDK sends `X-Idempotency-Key` for POST requests, but the current API

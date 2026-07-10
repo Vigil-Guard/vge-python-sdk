@@ -20,7 +20,7 @@ DEFAULT_API_KEY = "vg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 DEFAULT_BASE_URL = "https://api.vigilguard.customer.domain"
 
 
-def handle_all_errors():
+def handle_all_errors() -> None:
     """Comprehensive error handling."""
     try:
         client = Vigil(
@@ -67,7 +67,7 @@ def handle_all_errors():
         print(f"General error: {e}")
 
 
-def handle_batch_failures():
+def handle_batch_failures() -> None:
     """Handle partial batch failures."""
     from vigil import BatchItem
 
@@ -105,7 +105,7 @@ def handle_batch_failures():
         print(f"Failed: {e.failed}")
 
 
-def retry_with_backoff():
+def retry_with_backoff() -> None:
     """Example of custom retry logic."""
     import time
 
@@ -141,7 +141,7 @@ def retry_with_backoff():
         print("All attempts failed")
 
 
-def main():
+def main() -> None:
     """Run error handling examples."""
     print("=== Comprehensive Error Handling ===")
     handle_all_errors()

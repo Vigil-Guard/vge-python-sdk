@@ -3,7 +3,7 @@
 Official Python SDK for integrating with Vigil Guard prompt injection detection API (self-hosted).
 
 **Package:** `vigil-guard`
-**Version:** 1.8.0
+**Version:** 2.0.0
 **Python:** 3.9+
 **License:** MIT
 
@@ -179,9 +179,10 @@ result = client.detect(
 )
 
 print(f"Decision: {result.decision}")      # BLOCKED
-print(f"Score: {result.score}")            # 87.5
-print(f"Threat Level: {result.threat_level}")  # CRITICAL
 print(f"Request ID: {result.request_id}")
+if result.diagnostics_available:
+    print(f"Score: {result.score}")            # 87.5
+    print(f"Threat Level: {result.threat_level}")  # CRITICAL
 ```
 
 ---
@@ -857,5 +858,5 @@ src/vigil/
 
 ---
 
-**Last Updated:** 2026-06-19
-**SDK Version:** 1.8.0
+**Last Updated:** 2026-07-10
+**SDK Version:** 2.0.0
