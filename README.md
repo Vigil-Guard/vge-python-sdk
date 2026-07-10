@@ -272,14 +272,17 @@ exposure enabled are unaffected.
 
 ### DetectionBranches
 
-| Property      | Type             | Description                                                       |
-| ------------- | ---------------- | ----------------------------------------------------------------- |
-| `heuristics`  | HeuristicsBranch | Heuristic explanations and threat level                           |
-| `semantic`    | SemanticBranch   | Attack/safe similarity scores                                     |
-| `pii`         | PiiBranch        | PII detection categories and counts                               |
-| `llm_guard`   | LlmGuardBranch   | Injection Signal Classifier score/verdict (API field: `llmGuard`) |
-| `content_mod` | ContentModBranch | Content moderation categories and action                          |
-| `has_pii`     | bool             | True if PII detected                                              |
+Every branch is optional: the server includes only the branches that ran
+for a given request.
+
+| Property      | Type                       | Description                                                       |
+| ------------- | -------------------------- | ----------------------------------------------------------------- |
+| `heuristics`  | Optional[HeuristicsBranch] | Heuristic explanations and threat level                           |
+| `semantic`    | Optional[SemanticBranch]   | Attack/safe similarity scores                                     |
+| `pii`         | Optional[PiiBranch]        | PII detection categories and counts                               |
+| `llm_guard`   | Optional[LlmGuardBranch]   | Injection Signal Classifier score/verdict (API field: `llmGuard`) |
+| `content_mod` | Optional[ContentModBranch] | Content moderation categories and action                          |
+| `has_pii`     | bool                       | True if PII detected                                              |
 
 ## Error Handling
 
