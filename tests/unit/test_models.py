@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from conftest import build_detection_response
+from conftest import build_detection_response, build_opaque_response
 from pydantic import ValidationError
 
 from vigil.types import (
@@ -336,3 +336,159 @@ class TestBatchResult:
             batch.raise_for_failures()
         assert len(exc_info.value.successful) == 1
         assert len(exc_info.value.failed) == 1
+
+
+# Server aliases of the six diagnostic fields with valid non-null values.
+DIAGNOSTIC_ALIAS_VALUES: dict[str, object] = {
+    "score": 10.0,
+    "threatLevel": "LOW",
+    "confidence": 0.9,
+    "categories": [],
+    "branches": {},
+    "latencyMs": 5,
+}
+
+
+@pytest.mark.unit
+class TestDetectionResultOpaqueProfile:
+    """Opaque/full diagnostic-profile invariant (PRD_60 T1, ADR-0035)."""
+
+    def test_opaque_allowed_parses(self) -> None:
+        result = DetectionResult.model_validate(build_opaque_response(decision="ALLOWED"))
+        assert result.decision == Decision.ALLOWED
+        assert result.is_safe is True
+        assert result.diagnostics_available is False
+        assert result.score is None
+        assert result.threat_level is None
+        assert result.confidence is None
+        assert result.categories is None
+        assert result.branches is None
+        assert result.latency_ms is None
+
+    def test_opaque_blocked_parses_with_block_message(self) -> None:
+        result = DetectionResult.model_validate(
+            build_opaque_response(decision="BLOCKED", blockMessage="Request denied.")
+        )
+        assert result.is_blocked is True
+        assert result.block_message == "Request denied."
+        assert result.diagnostics_available is False
+
+    def test_opaque_sanitized_without_text_parses(self) -> None:
+        result = DetectionResult.model_validate(build_opaque_response(decision="SANITIZED"))
+        assert result.is_sanitized is True
+        assert result.sanitized_text is None
+        assert result.diagnostics_available is False
+
+    def test_opaque_sanitized_with_text_parses(self) -> None:
+        result = DetectionResult.model_validate(
+            build_opaque_response(decision="SANITIZED", sanitizedText="cleaned")
+        )
+        assert result.is_sanitized is True
+        assert result.sanitized_text == "cleaned"
+
+    def test_full_sanitized_without_text_still_rejected(self) -> None:
+        data = build_detection_response(decision="SANITIZED")
+        with pytest.raises(ValidationError, match="sanitized_text"):
+            DetectionResult.model_validate(data)
+
+    def test_opaque_diagnostic_properties_return_none(self) -> None:
+        result = DetectionResult.model_validate(build_opaque_response())
+        assert result.has_pii is None
+        assert result.is_high_risk is None
+        assert result.is_drifted is None
+        assert result.drift_level is None
+        assert result.drift_score is None
+
+    def test_full_profile_zero_and_empty_values_are_present(self) -> None:
+        data = build_detection_response(
+            score=0.0, threatLevel="LOW", confidence=0.0, categories=[], branches={}, latencyMs=0
+        )
+        result = DetectionResult.model_validate(data)
+        assert result.diagnostics_available is True
+        assert result.score == 0.0
+        assert result.confidence == 0.0
+        assert result.categories == []
+        assert result.latency_ms == 0
+        assert result.is_high_risk is False
+
+    @pytest.mark.parametrize("alias", sorted(DIAGNOSTIC_ALIAS_VALUES))
+    def test_single_diagnostic_field_supplied_rejected(self, alias: str) -> None:
+        data = build_opaque_response(**{alias: DIAGNOSTIC_ALIAS_VALUES[alias]})
+        with pytest.raises(ValidationError, match="partial diagnostic profile"):
+            DetectionResult.model_validate(data)
+
+    @pytest.mark.parametrize("alias", sorted(DIAGNOSTIC_ALIAS_VALUES))
+    def test_single_diagnostic_field_missing_rejected(self, alias: str) -> None:
+        data = build_detection_response()
+        del data[alias]
+        with pytest.raises(ValidationError, match="partial diagnostic profile"):
+            DetectionResult.model_validate(data)
+
+    @pytest.mark.parametrize("alias", sorted(DIAGNOSTIC_ALIAS_VALUES))
+    def test_single_explicit_null_diagnostic_rejected(self, alias: str) -> None:
+        data = build_detection_response(**{alias: None})
+        with pytest.raises(ValidationError, match="supplied as null"):
+            DetectionResult.model_validate(data)
+
+    def test_all_six_explicit_null_rejected(self) -> None:
+        data = build_detection_response(
+            score=None,
+            threatLevel=None,
+            confidence=None,
+            categories=None,
+            branches=None,
+            latencyMs=None,
+        )
+        with pytest.raises(ValidationError, match="supplied as null"):
+            DetectionResult.model_validate(data)
+
+    def test_field_name_input_full_profile(self) -> None:
+        data = {
+            "requestId": "req_names",
+            "decision": "ALLOWED",
+            "timestamp": "2024-01-15T10:30:00Z",
+            "score": 10.0,
+            "threat_level": "LOW",
+            "confidence": 0.9,
+            "categories": [],
+            "branches": {},
+            "latency_ms": 5,
+        }
+        result = DetectionResult.model_validate(data)
+        assert result.diagnostics_available is True
+        assert result.threat_level == ThreatLevel.LOW
+        assert result.latency_ms == 5
+
+    def test_field_name_single_field_rejected(self) -> None:
+        data = build_opaque_response(threat_level="LOW")
+        with pytest.raises(ValidationError, match="partial diagnostic profile"):
+            DetectionResult.model_validate(data)
+
+    def test_mixed_alias_and_field_name_full_profile(self) -> None:
+        data = build_detection_response()
+        del data["threatLevel"]
+        del data["latencyMs"]
+        data["threat_level"] = "LOW"
+        data["latency_ms"] = 5
+        result = DetectionResult.model_validate(data)
+        assert result.diagnostics_available is True
+
+    def test_opaque_extra_field_ignored_at_model_level(self) -> None:
+        result = DetectionResult.model_validate(build_opaque_response(futureField="ignored"))
+        assert result.diagnostics_available is False
+
+    def test_batch_item_accepts_opaque_response(self) -> None:
+        data = {
+            "items": [
+                {"index": 0, "ok": True, "response": build_opaque_response(decision="ALLOWED")},
+                {"index": 1, "ok": True, "response": build_detection_response(requestId="r_full")},
+            ]
+        }
+        batch = BatchResult.model_validate(data)
+        assert batch.all_succeeded is True
+        first = batch[0].response
+        assert first is not None
+        assert first.diagnostics_available is False
+        second = batch[1].response
+        assert second is not None
+        assert second.diagnostics_available is True

@@ -11,8 +11,9 @@ import json
 
 import pytest
 import respx
-from conftest import build_detection_response
+from conftest import build_detection_response, build_opaque_response
 from httpx import Response
+from pydantic import ValidationError
 
 from vigil import (
     AgentPayload,
@@ -767,3 +768,109 @@ class TestAsyncContract:
 
         assert result.total == 2
         assert result.all_succeeded is True
+
+
+class TestOpaqueResponseContract:
+    """Contract tests for the strict anti-recon opaque response schema.
+
+    Mirrors opaqueGuardResponseSchema: requestId (uuid), decision,
+    timestamp, plus optional sanitizedText / outputText / blockMessage.
+    No diagnostic field is present.
+    """
+
+    def test_opaque_allowed_sync(self, respx_mock: respx.MockRouter) -> None:
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(200, json=build_opaque_response(decision="ALLOWED"))
+        )
+
+        client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
+        result = client.detect("hello")
+
+        assert result.decision == Decision.ALLOWED
+        assert result.diagnostics_available is False
+        assert result.score is None
+        assert result.threat_level is None
+        assert result.confidence is None
+        assert result.categories is None
+        assert result.branches is None
+        assert result.latency_ms is None
+
+    def test_opaque_blocked_with_block_message_sync(self, respx_mock: respx.MockRouter) -> None:
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(
+                200,
+                json=build_opaque_response(
+                    decision="BLOCKED", blockMessage="Your request cannot be processed."
+                ),
+            )
+        )
+
+        client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
+        result = client.detect("probe")
+
+        assert result.is_blocked is True
+        assert result.block_message == "Your request cannot be processed."
+        assert result.is_high_risk is None
+
+    def test_opaque_sanitized_with_and_without_text_sync(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
+        client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
+
+        route = respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input")
+        route.mock(return_value=Response(200, json=build_opaque_response(decision="SANITIZED")))
+        without_text = client.detect("pii text")
+        assert without_text.is_sanitized is True
+        assert without_text.sanitized_text is None
+
+        route.mock(
+            return_value=Response(
+                200, json=build_opaque_response(decision="SANITIZED", sanitizedText="masked ***")
+            )
+        )
+        with_text = client.detect("pii text")
+        assert with_text.is_sanitized is True
+        assert with_text.sanitized_text == "masked ***"
+
+    async def test_opaque_blocked_async(self, respx_mock: respx.MockRouter) -> None:
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(200, json=build_opaque_response(decision="BLOCKED"))
+        )
+
+        async with AsyncVigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL) as client:
+            result = await client.detect("probe")
+
+        assert result.is_blocked is True
+        assert result.diagnostics_available is False
+
+    def test_partial_diagnostics_rejected_sync(self, respx_mock: respx.MockRouter) -> None:
+        """A response mixing the opaque surface with some diagnostics is no contract."""
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(
+                200,
+                json=build_opaque_response(decision="BLOCKED", score=90.0, threatLevel="HIGH"),
+            )
+        )
+
+        client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
+        with pytest.raises(ValidationError, match="partial diagnostic profile"):
+            client.detect("probe")
+
+    def test_explicit_null_diagnostics_rejected_sync(self, respx_mock: respx.MockRouter) -> None:
+        respx_mock.post(f"{DUMMY_BASE_URL}/v1/guard/input").mock(
+            return_value=Response(
+                200,
+                json=build_detection_response(
+                    score=None,
+                    threatLevel=None,
+                    confidence=None,
+                    categories=None,
+                    branches=None,
+                    latencyMs=None,
+                ),
+            )
+        )
+
+        client = Vigil(api_key=DUMMY_API_KEY, base_url=DUMMY_BASE_URL)
+        with pytest.raises(ValidationError, match="supplied as null"):
+            client.detect("probe")

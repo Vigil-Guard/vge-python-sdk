@@ -59,28 +59,28 @@ else:
 
 ### Constructor Parameters
 
-| Parameter                   | Type    | Default                      | Description                                      |
-| --------------------------- | ------- | ---------------------------- | ------------------------------------------------ |
-| `api_key`                   | `str`   | -                            | API key (required, or set `VIGIL_GUARD_API_KEY`) |
-| `base_url`                  | `str`   | `https://api.vigilguard.customer.domain` | Self-hosted API base URL                         |
-| `timeout`                   | `float` | `30.0`                       | Request timeout (seconds)                        |
-| `connect_timeout`           | `float` | `5.0`                        | Connection timeout (seconds)                     |
-| `read_timeout`              | `float` | `None`                       | Read timeout (seconds)                           |
-| `write_timeout`             | `float` | `None`                       | Write timeout (seconds)                          |
-| `pool_timeout`              | `float` | `None`                       | Pool acquisition timeout (seconds)               |
-| `max_retries`               | `int`   | `3`                          | Maximum retry attempts                           |
-| `max_connections`           | `int`   | `100`                        | Connection pool size                             |
-| `max_keepalive_connections` | `int`   | `20`                         | Keepalive connections                            |
-| `keepalive_expiry`          | `float` | `5.0`                        | Keepalive expiry (seconds)                       |
-| `proxy`                     | `str`   | `None`                       | HTTP proxy URL                                   |
-| `proxy_auth`                | `tuple` | `None`                       | Proxy auth `(username, password)`                |
-| `verify`                    | `bool`  | `True`                       | Verify SSL certificates (emits warning if `False` with live key) |
-| `ca_bundle`                 | `str`   | `None`                       | Path to CA bundle file                           |
-| `client_cert`               | `str`   | `None`                       | Path to client certificate (mTLS)                |
-| `client_key`                | `str`   | `None`                       | Path to client key (mTLS)                        |
-| `mtls_cert`                 | `tuple` | `None`                       | mTLS cert/key tuple `(cert, key)`                |
-| `strict_mode`               | `bool`  | `False`                      | Raise on unknown response fields                 |
-| `default_headers`           | `dict`  | `{}`                         | Custom headers for all requests                  |
+| Parameter                   | Type    | Default                                  | Description                                                      |
+| --------------------------- | ------- | ---------------------------------------- | ---------------------------------------------------------------- |
+| `api_key`                   | `str`   | -                                        | API key (required, or set `VIGIL_GUARD_API_KEY`)                 |
+| `base_url`                  | `str`   | `https://api.vigilguard.customer.domain` | Self-hosted API base URL                                         |
+| `timeout`                   | `float` | `30.0`                                   | Request timeout (seconds)                                        |
+| `connect_timeout`           | `float` | `5.0`                                    | Connection timeout (seconds)                                     |
+| `read_timeout`              | `float` | `None`                                   | Read timeout (seconds)                                           |
+| `write_timeout`             | `float` | `None`                                   | Write timeout (seconds)                                          |
+| `pool_timeout`              | `float` | `None`                                   | Pool acquisition timeout (seconds)                               |
+| `max_retries`               | `int`   | `3`                                      | Maximum retry attempts                                           |
+| `max_connections`           | `int`   | `100`                                    | Connection pool size                                             |
+| `max_keepalive_connections` | `int`   | `20`                                     | Keepalive connections                                            |
+| `keepalive_expiry`          | `float` | `5.0`                                    | Keepalive expiry (seconds)                                       |
+| `proxy`                     | `str`   | `None`                                   | HTTP proxy URL                                                   |
+| `proxy_auth`                | `tuple` | `None`                                   | Proxy auth `(username, password)`                                |
+| `verify`                    | `bool`  | `True`                                   | Verify SSL certificates (emits warning if `False` with live key) |
+| `ca_bundle`                 | `str`   | `None`                                   | Path to CA bundle file                                           |
+| `client_cert`               | `str`   | `None`                                   | Path to client certificate (mTLS)                                |
+| `client_key`                | `str`   | `None`                                   | Path to client key (mTLS)                                        |
+| `mtls_cert`                 | `tuple` | `None`                                   | mTLS cert/key tuple `(cert, key)`                                |
+| `strict_mode`               | `bool`  | `False`                                  | Raise on unknown response fields                                 |
+| `default_headers`           | `dict`  | `{}`                                     | Custom headers for all requests                                  |
 
 ### Environment Variables
 
@@ -351,43 +351,51 @@ for item in items:
 
 ### DetectionResult
 
-| Property          | Type                     | Description                            |
-| ----------------- | ------------------------ | -------------------------------------- |
-| `request_id`      | `str`                    | Unique request identifier              |
-| `decision`        | `Decision`               | `ALLOWED`, `BLOCKED`, or `SANITIZED`   |
-| `score`           | `float`                  | Risk score (0.0-100.0)                 |
-| `threat_level`    | `ThreatLevel`            | `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL` |
-| `confidence`      | `float`                  | Confidence level (0.0-1.0)             |
-| `categories`      | `List[str]`              | Detected threat categories             |
-| `branches`        | `DetectionBranches`      | Branch results                         |
-| `latency_ms`      | `int`                    | Processing time (ms)                   |
-| `timestamp`       | `datetime`               | Request timestamp                      |
-| `sanitized_text`  | `Optional[str]`          | Sanitized text (if `SANITIZED`)        |
-| `decision_reason` | `Optional[str]`          | Human-readable decision reason         |
-| `language_info`   | `Optional[LanguageInfo]` | Detected language metadata             |
+| Property          | Type                          | Description                                              |
+| ----------------- | ----------------------------- | -------------------------------------------------------- |
+| `request_id`      | `str`                         | Unique request identifier                                |
+| `decision`        | `Decision`                    | `ALLOWED`, `BLOCKED`, or `SANITIZED`                     |
+| `score`           | `Optional[float]`             | Risk score (0.0-100.0); `None` on opaque responses       |
+| `threat_level`    | `Optional[ThreatLevel]`       | `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL`; `None` on opaque |
+| `confidence`      | `Optional[float]`             | Confidence level (0.0-1.0); `None` on opaque responses   |
+| `categories`      | `Optional[List[str]]`         | Detected threat categories; `None` on opaque responses   |
+| `branches`        | `Optional[DetectionBranches]` | Branch results; `None` on opaque responses               |
+| `latency_ms`      | `Optional[int]`               | Processing time (ms); `None` on opaque responses         |
+| `timestamp`       | `datetime`                    | Request timestamp                                        |
+| `sanitized_text`  | `Optional[str]`               | Sanitized text (if `SANITIZED`, full profile)            |
+| `decision_reason` | `Optional[str]`               | Human-readable decision reason                           |
+| `language_info`   | `Optional[LanguageInfo]`      | Detected language metadata                               |
 
 **Note:** SDK field names match the API schema. Descriptions below use user-facing terminology only; JSON field names (e.g. `llmGuard`, `modelUsed`) are unchanged and passed through as-is.
 
+**Opaque responses:** servers with anti-recon opaque exposure enabled
+withhold all six diagnostic fields (`score`, `threat_level`, `confidence`,
+`categories`, `branches`, `latency_ms`). Check `diagnostics_available`
+before reading them. A response supplying only some of the six, or any of
+them as `null`, raises `pydantic.ValidationError`.
+
 **Convenience Properties:**
 
+- `diagnostics_available` - `False` when the server withheld diagnostics (opaque profile)
 - `is_safe` - `True` if decision is `ALLOWED`
 - `is_blocked` - `True` if decision is `BLOCKED`
 - `is_sanitized` - `True` if decision is `SANITIZED`
-- `is_high_risk` - `True` if threat level is `HIGH` or `CRITICAL`
-- `has_pii` - `True` if PII was detected
+- `is_high_risk` - `True` if threat level is `HIGH` or `CRITICAL`; `None` on the opaque profile
+- `has_pii` - `True` if PII was detected; `None` on the opaque profile
+- `is_drifted` / `drift_level` / `drift_score` - policy-drift accessors; `None` on the opaque profile
 
 ---
 
 ### DetectionBranches
 
-| Property     | Type                         | Description                  |
-| ------------ | ---------------------------- | ---------------------------- |
-| `heuristics` | `Optional[HeuristicsBranch]` | Pattern matching results     |
-| `semantic`   | `Optional[SemanticBranch]`   | Embedding similarity results |
-| `pii`        | `Optional[PiiBranch]`        | PII detection results        |
-| `llm_guard`  | `Optional[LlmGuardBranch]`   | Injection Signal Classifier results |
-| `content_mod` | `Optional[ContentModBranch]` | Content moderation results   |
-| `has_pii`    | `bool`                       | `True` if PII detected       |
+| Property      | Type                         | Description                         |
+| ------------- | ---------------------------- | ----------------------------------- |
+| `heuristics`  | `Optional[HeuristicsBranch]` | Pattern matching results            |
+| `semantic`    | `Optional[SemanticBranch]`   | Embedding similarity results        |
+| `pii`         | `Optional[PiiBranch]`        | PII detection results               |
+| `llm_guard`   | `Optional[LlmGuardBranch]`   | Injection Signal Classifier results |
+| `content_mod` | `Optional[ContentModBranch]` | Content moderation results          |
+| `has_pii`     | `bool`                       | `True` if PII detected              |
 
 ---
 
@@ -428,38 +436,38 @@ for item in items:
 
 ### LlmGuardBranch
 
-| Property     | Type            | Description      |
-| ------------ | --------------- | ---------------- |
-| `score`      | `float`         | Branch score     |
-| `verdict`    | `str`           | Classifier verdict |
+| Property     | Type            | Description                        |
+| ------------ | --------------- | ---------------------------------- |
+| `score`      | `float`         | Branch score                       |
+| `verdict`    | `str`           | Classifier verdict                 |
 | `model_used` | `str`           | Model identifier (backend-defined) |
-| `timing_ms`  | `Optional[int]` | Processing time  |
+| `timing_ms`  | `Optional[int]` | Processing time                    |
 
 ---
 
 ### ContentModBranch
 
-| Property              | Type                            | Description                            |
-| --------------------- | ------------------------------- | -------------------------------------- |
-| `score`               | `float`                         | Branch score                           |
-| `confidence`          | `float`                         | Model confidence                       |
-| `categories`          | `List[ContentModCategoryResult]` | Per-category classification            |
-| `triggered_categories`| `List[str]`                     | Triggered category names               |
-| `detected_language`   | `str`                           | Detected language                      |
-| `model_used`          | `str`                           | Model identifier (backend-defined)     |
-| `suggested_action`    | `str`                           | Suggested action (ALLOW/BLOCK/LOG)     |
-| `action_applied`      | `Optional[str]`                 | Applied action, if any                 |
-| `processing_time_ms`  | `int`                           | Processing time (ms)                   |
-| `error`               | `Optional[str]`                 | Error code, if any                     |
-| `error_detail`        | `Optional[str]`                 | Error details                          |
+| Property               | Type                             | Description                        |
+| ---------------------- | -------------------------------- | ---------------------------------- |
+| `score`                | `float`                          | Branch score                       |
+| `confidence`           | `float`                          | Model confidence                   |
+| `categories`           | `List[ContentModCategoryResult]` | Per-category classification        |
+| `triggered_categories` | `List[str]`                      | Triggered category names           |
+| `detected_language`    | `str`                            | Detected language                  |
+| `model_used`           | `str`                            | Model identifier (backend-defined) |
+| `suggested_action`     | `str`                            | Suggested action (ALLOW/BLOCK/LOG) |
+| `action_applied`       | `Optional[str]`                  | Applied action, if any             |
+| `processing_time_ms`   | `int`                            | Processing time (ms)               |
+| `error`                | `Optional[str]`                  | Error code, if any                 |
+| `error_detail`         | `Optional[str]`                  | Error details                      |
 
 ### ContentModCategoryResult
 
-| Property   | Type    | Description                  |
-| ---------- | ------- | ---------------------------- |
-| `name`     | `str`   | Category name                |
-| `score`    | `float` | Category score               |
-| `triggered` | `bool`  | Category triggered flag      |
+| Property    | Type    | Description             |
+| ----------- | ------- | ----------------------- |
+| `name`      | `str`   | Category name           |
+| `score`     | `float` | Category score          |
+| `triggered` | `bool`  | Category triggered flag |
 
 ---
 
@@ -624,7 +632,7 @@ except Exception as exc:
 
 **VigilLicenseError:**
 
-- `error_code` - LICENSE_* code from the API
+- `error_code` - LICENSE\_\* code from the API
 
 ### Retry Behavior
 

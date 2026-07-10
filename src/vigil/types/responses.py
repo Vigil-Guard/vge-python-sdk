@@ -19,6 +19,17 @@ from .enums import Decision, ThreatLevel
 ArbiterSignal = Literal["ALLOW", "BLOCK"]
 RuleAction = Literal["ALLOW", "BLOCK", "LOG", "SANITIZE"]
 
+# The six diagnostic fields the anti-recon opaque response withholds
+# (server contract: opaqueGuardResponseSchema, ADR-0035 / PRD_60 T1).
+_DIAGNOSTIC_FIELD_NAMES = (
+    "score",
+    "threat_level",
+    "confidence",
+    "categories",
+    "branches",
+    "latency_ms",
+)
+
 
 class LanguageInfo(BaseModel):
     """Detected language metadata."""
@@ -35,18 +46,24 @@ class DetectionResult(BaseModel):
     Result from a single detection request.
 
     This is the main response type for detect() and detect_output() methods.
+
+    Servers with anti-recon opaque exposure enabled withhold all six
+    diagnostic fields (score, threat_level, confidence, categories,
+    branches, latency_ms). Such responses parse with those fields set to
+    None and ``diagnostics_available`` False. A response supplying only
+    some of the six, or supplying any of them as null, is invalid.
     """
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     request_id: str = Field(alias="requestId")
     decision: Decision = Field(alias="decision")
-    score: float = Field(alias="score", ge=0.0, le=100.0)
-    threat_level: ThreatLevel = Field(alias="threatLevel")
-    confidence: float = Field(alias="confidence", ge=0.0, le=1.0)
-    categories: List[str] = Field(alias="categories")
-    branches: DetectionBranches = Field(alias="branches")
-    latency_ms: int = Field(alias="latencyMs", ge=0)
+    score: Optional[float] = Field(default=None, alias="score", ge=0.0, le=100.0)
+    threat_level: Optional[ThreatLevel] = Field(default=None, alias="threatLevel")
+    confidence: Optional[float] = Field(default=None, alias="confidence", ge=0.0, le=1.0)
+    categories: Optional[List[str]] = Field(default=None, alias="categories")
+    branches: Optional[DetectionBranches] = Field(default=None, alias="branches")
+    latency_ms: Optional[int] = Field(default=None, alias="latencyMs", ge=0)
     timestamp: datetime = Field(alias="timestamp")
 
     sanitized_text: Optional[str] = Field(default=None, alias="sanitizedText")
@@ -71,11 +88,53 @@ class DetectionResult(BaseModel):
     block_message: Optional[str] = Field(default=None, alias="blockMessage")
 
     @model_validator(mode="after")
+    def validate_diagnostic_profile(self) -> DetectionResult:
+        """Accept only the opaque (all absent) or full (all present, non-null) profile.
+
+        Presence is decided from ``model_fields_set``, which Pydantic
+        normalizes to model field names for both alias and field-name
+        input, so empty lists and zero values count as present.
+        """
+        supplied = self.model_fields_set.intersection(_DIAGNOSTIC_FIELD_NAMES)
+        if not supplied:
+            return self
+        missing = [name for name in _DIAGNOSTIC_FIELD_NAMES if name not in supplied]
+        if missing:
+            raise ValueError(
+                f"partial diagnostic profile: missing {missing}; "
+                "the opaque profile omits all six diagnostic fields"
+            )
+        null_supplied = [name for name in _DIAGNOSTIC_FIELD_NAMES if getattr(self, name) is None]
+        if null_supplied:
+            raise ValueError(
+                f"diagnostic fields supplied as null: {null_supplied}; "
+                "the full profile requires non-null values"
+            )
+        return self
+
+    @model_validator(mode="after")
     def validate_sanitized_text(self) -> DetectionResult:
-        """Ensure sanitized_text is present when decision is SANITIZED."""
-        if self.decision == Decision.SANITIZED and self.sanitized_text is None:
+        """Ensure sanitized_text is present when a full-profile decision is SANITIZED.
+
+        The strict opaque server schema allows SANITIZED both with and
+        without sanitizedText, so the opaque profile is exempt.
+        """
+        if (
+            self.decision == Decision.SANITIZED
+            and self.diagnostics_available
+            and self.sanitized_text is None
+        ):
             raise ValueError("sanitized_text is required when decision is SANITIZED")
         return self
+
+    @property
+    def diagnostics_available(self) -> bool:
+        """Whether the server returned the full diagnostic profile.
+
+        False for the anti-recon opaque response, where the six diagnostic
+        fields and the derived risk/PII/drift properties are withheld.
+        """
+        return self.branches is not None
 
     @property
     def is_safe(self) -> bool:
@@ -93,30 +152,40 @@ class DetectionResult(BaseModel):
         return self.decision == Decision.SANITIZED
 
     @property
-    def is_high_risk(self) -> bool:
-        """Check if threat level is HIGH or CRITICAL."""
+    def is_high_risk(self) -> Optional[bool]:
+        """Check if threat level is HIGH or CRITICAL; None on the opaque profile."""
+        if self.threat_level is None:
+            return None
         return self.threat_level in {ThreatLevel.HIGH, ThreatLevel.CRITICAL}
 
     @property
-    def has_pii(self) -> bool:
-        """Check if PII was detected."""
+    def has_pii(self) -> Optional[bool]:
+        """Check if PII was detected; None on the opaque profile."""
+        if self.branches is None:
+            return None
         return self.branches.has_pii
 
     @property
-    def is_drifted(self) -> bool:
-        """Check if policy drift was detected with non-ON_SCOPE level."""
+    def is_drifted(self) -> Optional[bool]:
+        """Check if policy drift was detected with non-ON_SCOPE level; None on the opaque profile."""
+        if self.branches is None:
+            return None
         drift = self.branches.semantic.policy_drift if self.branches.semantic else None
         return drift is not None and drift.available and drift.level not in (None, "ON_SCOPE")
 
     @property
-    def drift_level(self) -> str | None:
-        """Get policy drift level if available."""
+    def drift_level(self) -> Optional[str]:
+        """Get policy drift level if available; None on the opaque profile."""
+        if self.branches is None:
+            return None
         drift = self.branches.semantic.policy_drift if self.branches.semantic else None
         return drift.level if drift and drift.available else None
 
     @property
-    def drift_score(self) -> float | None:
-        """Get policy drift score if available."""
+    def drift_score(self) -> Optional[float]:
+        """Get policy drift score if available; None on the opaque profile."""
+        if self.branches is None:
+            return None
         drift = self.branches.semantic.policy_drift if self.branches.semantic else None
         return drift.drift_score if drift and drift.available else None
 

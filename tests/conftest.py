@@ -43,6 +43,19 @@ def build_detection_response(**overrides: object) -> dict[str, object]:
     return data
 
 
+def build_opaque_response(**overrides: object) -> dict[str, object]:
+    """Anti-recon opaque response: exactly the strict server schema
+    (requestId, decision, timestamp, plus optional sanitizedText /
+    outputText / blockMessage) with all six diagnostic fields withheld."""
+    data: dict[str, object] = {
+        "requestId": "5f5f8c7e-1f4b-4a5b-9a67-2f3d4e5a6b7c",
+        "decision": "BLOCKED",
+        "timestamp": "2024-01-15T10:30:00Z",
+    }
+    data.update(overrides)
+    return data
+
+
 @pytest.fixture(autouse=True)
 def block_network() -> Generator[respx.MockRouter, None, None]:
     """

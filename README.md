@@ -62,27 +62,27 @@ async with AsyncVigil(api_key="vg_live_...") as client:
 
 ### Optional Parameters
 
-| Parameter                   | Default                      | Description                                          |
-| --------------------------- | ---------------------------- | ---------------------------------------------------- |
+| Parameter                   | Default                                  | Description                                              |
+| --------------------------- | ---------------------------------------- | -------------------------------------------------------- |
 | `base_url`                  | `https://api.vigilguard.customer.domain` | Self-hosted API base URL (or set `VIGIL_GUARD_BASE_URL`) |
-| `timeout`                   | 30.0                         | Request timeout in seconds                           |
-| `connect_timeout`           | 5.0                          | Connection timeout in seconds                        |
-| `read_timeout`              | None                         | Read timeout in seconds                              |
-| `write_timeout`             | None                         | Write timeout in seconds                             |
-| `pool_timeout`              | None                         | Pool acquisition timeout in seconds                  |
-| `max_retries`               | 3                            | Maximum retry attempts                               |
-| `max_connections`           | 100                          | Connection pool size                                 |
-| `max_keepalive_connections` | 20                           | Maximum keepalive connections                        |
-| `keepalive_expiry`          | 5.0                          | Keepalive expiry in seconds                          |
-| `proxy`                     | None                         | HTTP proxy URL                                       |
-| `proxy_auth`                | None                         | Proxy auth tuple `(username, password)`              |
-| `verify`                    | True                         | Verify SSL certificates                              |
-| `ca_bundle`                 | None                         | Path to CA bundle file                               |
-| `client_cert`               | None                         | Path to client certificate for mTLS                  |
-| `client_key`                | None                         | Path to client private key for mTLS                  |
-| `mtls_cert`                 | None                         | Tuple `(cert_path, key_path)` for mTLS               |
-| `strict_mode`               | False                        | Raise on unknown API response fields                 |
-| `default_headers`           | `{}`                         | Default headers for all requests                     |
+| `timeout`                   | 30.0                                     | Request timeout in seconds                               |
+| `connect_timeout`           | 5.0                                      | Connection timeout in seconds                            |
+| `read_timeout`              | None                                     | Read timeout in seconds                                  |
+| `write_timeout`             | None                                     | Write timeout in seconds                                 |
+| `pool_timeout`              | None                                     | Pool acquisition timeout in seconds                      |
+| `max_retries`               | 3                                        | Maximum retry attempts                                   |
+| `max_connections`           | 100                                      | Connection pool size                                     |
+| `max_keepalive_connections` | 20                                       | Maximum keepalive connections                            |
+| `keepalive_expiry`          | 5.0                                      | Keepalive expiry in seconds                              |
+| `proxy`                     | None                                     | HTTP proxy URL                                           |
+| `proxy_auth`                | None                                     | Proxy auth tuple `(username, password)`                  |
+| `verify`                    | True                                     | Verify SSL certificates                                  |
+| `ca_bundle`                 | None                                     | Path to CA bundle file                                   |
+| `client_cert`               | None                                     | Path to client certificate for mTLS                      |
+| `client_key`                | None                                     | Path to client private key for mTLS                      |
+| `mtls_cert`                 | None                                     | Tuple `(cert_path, key_path)` for mTLS                   |
+| `strict_mode`               | False                                    | Raise on unknown API response fields                     |
+| `default_headers`           | `{}`                                     | Default headers for all requests                         |
 
 ### Enterprise Configuration
 
@@ -218,33 +218,65 @@ to split and retry safely.
 
 ### DetectionResult
 
-| Property         | Type              | Description                              |
-| ---------------- | ----------------- | ---------------------------------------- |
-| `request_id`     | str               | Unique request identifier                |
-| `decision`       | Decision          | ALLOWED, BLOCKED, or SANITIZED           |
-| `score`          | float             | Risk score (0-100)                       |
-| `confidence`     | float             | Confidence level (0-1)                   |
-| `threat_level`   | ThreatLevel       | LOW, MEDIUM, HIGH, or CRITICAL           |
-| `latency_ms`     | int               | Server processing latency in ms          |
-| `timestamp`      | datetime          | Response timestamp                       |
-| `sanitized_text` | str               | Sanitized text (if SANITIZED)            |
-| `branches`       | DetectionBranches | Detailed branch results                  |
-| `is_safe`        | bool              | True if ALLOWED                          |
-| `is_blocked`     | bool              | True if BLOCKED                          |
-| `is_sanitized`   | bool              | True if SANITIZED                        |
-| `is_high_risk`   | bool              | True if threat level is HIGH or CRITICAL |
-| `has_pii`        | bool              | True if PII detected                     |
+| Property                | Type                        | Description                                               |
+| ----------------------- | --------------------------- | --------------------------------------------------------- |
+| `request_id`            | str                         | Unique request identifier                                 |
+| `decision`              | Decision                    | ALLOWED, BLOCKED, or SANITIZED                            |
+| `score`                 | Optional[float]             | Risk score (0-100); None on opaque responses              |
+| `confidence`            | Optional[float]             | Confidence level (0-1); None on opaque responses          |
+| `threat_level`          | Optional[ThreatLevel]       | LOW, MEDIUM, HIGH, or CRITICAL; None on opaque responses  |
+| `latency_ms`            | Optional[int]               | Server processing latency in ms; None on opaque responses |
+| `timestamp`             | datetime                    | Response timestamp                                        |
+| `sanitized_text`        | Optional[str]               | Sanitized text (if SANITIZED, full profile)               |
+| `branches`              | Optional[DetectionBranches] | Detailed branch results; None on opaque responses         |
+| `diagnostics_available` | bool                        | False when the server withheld diagnostics (opaque)       |
+| `is_safe`               | bool                        | True if ALLOWED                                           |
+| `is_blocked`            | bool                        | True if BLOCKED                                           |
+| `is_sanitized`          | bool                        | True if SANITIZED                                         |
+| `is_high_risk`          | Optional[bool]              | True if HIGH/CRITICAL; None on opaque responses           |
+| `has_pii`               | Optional[bool]              | True if PII detected; None on opaque responses            |
+
+#### Opaque responses (anti-recon)
+
+Servers can enable anti-recon opaque exposure per rule set. Such responses
+carry only `request_id`, `decision`, `timestamp`, and (optionally)
+`sanitized_text` / `output_text` / `block_message` — every diagnostic field
+is withheld, not zeroed. Check `diagnostics_available` before reading
+scores or branch details:
+
+```python
+result = client.detect(prompt)
+if result.is_blocked:
+    reject(result.block_message)
+elif result.diagnostics_available and result.is_high_risk:
+    escalate(result.score, result.categories)
+```
+
+A response supplying only some of the six diagnostic fields (`score`,
+`threat_level`, `confidence`, `categories`, `branches`, `latency_ms`), or
+supplying any of them as `null`, does not match either server contract and
+raises `pydantic.ValidationError`.
+
+#### Migrating from 1.x
+
+SDK 2.0.0 is a SemVer-major change: the six diagnostic fields and the
+`is_high_risk` / `has_pii` / `is_drifted` / `drift_level` / `drift_score`
+properties are now `Optional` and return `None` when the server withholds
+diagnostics. Code that assumed they are always present should gate on
+`diagnostics_available` (or compare explicitly, e.g.
+`result.is_high_risk is True`). Responses from servers without opaque
+exposure enabled are unaffected.
 
 ### DetectionBranches
 
-| Property     | Type             | Description                             |
-| ------------ | ---------------- | --------------------------------------- |
-| `heuristics` | HeuristicsBranch | Heuristic explanations and threat level |
-| `semantic`   | SemanticBranch   | Attack/safe similarity scores           |
-| `pii`        | PiiBranch        | PII detection categories and counts     |
-| `llm_guard`  | LlmGuardBranch   | Injection Signal Classifier score/verdict (API field: `llmGuard`) |
-| `content_mod` | ContentModBranch | Content moderation categories and action |
-| `has_pii`    | bool             | True if PII detected                    |
+| Property      | Type             | Description                                                       |
+| ------------- | ---------------- | ----------------------------------------------------------------- |
+| `heuristics`  | HeuristicsBranch | Heuristic explanations and threat level                           |
+| `semantic`    | SemanticBranch   | Attack/safe similarity scores                                     |
+| `pii`         | PiiBranch        | PII detection categories and counts                               |
+| `llm_guard`   | LlmGuardBranch   | Injection Signal Classifier score/verdict (API field: `llmGuard`) |
+| `content_mod` | ContentModBranch | Content moderation categories and action                          |
+| `has_pii`     | bool             | True if PII detected                                              |
 
 ## Error Handling
 

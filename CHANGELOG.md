@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-10
+
+### Changed (breaking)
+
+- `DetectionResult` now accepts the anti-recon opaque response profile:
+  `score`, `threat_level`, `confidence`, `categories`, `branches`, and
+  `latency_ms` are `Optional` and are `None` when the server withholds
+  diagnostics. This applies to the sync, async, and batch clients.
+- `is_high_risk`, `has_pii`, `is_drifted`, `drift_level`, and `drift_score`
+  return `None` (instead of raising or asserting `False`) on the opaque
+  profile.
+- `SANITIZED` requires `sanitized_text` only on the full profile; opaque
+  `SANITIZED` responses parse with or without `sanitizedText`, matching the
+  strict server schema.
+
+### Added
+
+- `DetectionResult.diagnostics_available` — `False` when the server
+  returned the opaque profile.
+- Profile invariant: a response supplying one to five diagnostic fields, or
+  supplying any diagnostic field as `null`, raises
+  `pydantic.ValidationError`. Empty lists and zero values count as present.
+
+### Migration
+
+- Gate diagnostic reads on `result.diagnostics_available`, or compare
+  properties explicitly (`result.is_high_risk is True`).
+- Before rolling a consumer back to SDK 1.x, disable opaque exposure for
+  that consumer's rule sets; a 1.x parser rejects opaque responses.
+
 ## [1.8.0] - 2026-06-19
 
 ### Added
