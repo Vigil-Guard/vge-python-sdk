@@ -109,6 +109,19 @@ jobs:
             pip install vigil-guard==${{ steps.version.outputs.package_version }}
             ```
 
+            ## Migration from 1.x
+
+            SDK 2.0 accepts anti-recon opaque responses. Check
+            `result.diagnostics_available` before reading diagnostic fields or
+            compare optional diagnostic properties explicitly, such as
+            `result.is_high_risk is True`.
+
+            Before rolling a consumer back to SDK 1.x, disable opaque exposure
+            for that consumer's affected rule sets. A 1.x parser rejects opaque
+            responses, so use a forward fix when that cannot be guaranteed.
+
+            See `CHANGELOG.md` in this release for the complete migration notes.
+
             ## Verification
             SBOM is included in release assets. GPG signatures are included when the release signing key is configured.
 
