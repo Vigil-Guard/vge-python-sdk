@@ -10,7 +10,7 @@ Official Python SDK for Vigil Guard prompt injection detection API (self-hosted 
 ## Installation
 
 ```bash
-pip install "vigil-guard @ git+https://github.com/Vigil-Guard/vge-python-sdk.git"
+pip install "vigil-guard==2.0.0"
 ```
 
 ## Quick Start
