@@ -12,19 +12,19 @@ Official Python SDK for integrating with Vigil Guard prompt injection detection 
 ## Installation
 
 ```bash
-pip install "vigil-guard @ git+https://github.com/Vigil-Guard/vge-python-sdk.git"
+pip install "vigil-guard==2.0.0"
 ```
 
 With Poetry:
 
 ```bash
-poetry add "git+https://github.com/Vigil-Guard/vge-python-sdk.git"
+poetry add "vigil-guard@2.0.0"
 ```
 
 With uv:
 
 ```bash
-uv add "vigil-guard @ git+https://github.com/Vigil-Guard/vge-python-sdk.git"
+uv add "vigil-guard==2.0.0"
 ```
 
 ---
@@ -858,5 +858,5 @@ src/vigil/
 
 ---
 
-**Last Updated:** 2026-07-10
+**Last Updated:** 2026-07-14
 **SDK Version:** 2.0.0
