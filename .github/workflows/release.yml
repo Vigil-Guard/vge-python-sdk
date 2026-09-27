@@ -96,7 +96,7 @@ jobs:
             release-assets/*
           generate_release_notes: true
           body: |
-            Vigil Guard Python SDK ${{ steps.version.outputs.package_version }} for the Vigil Guard 1.8.x API contract.
+            Vigil Guard Python SDK ${{ steps.version.outputs.package_version }}.
 
             ## Installation
             ```bash

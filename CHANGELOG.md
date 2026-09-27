@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Release notes no longer name a fixed server API version.
+- `pytest.ini` is now the only pytest configuration; the duplicate `[tool.pytest.ini_options]` table was removed from
+  `pyproject.toml`.
+
 ## [2.0.0] - 2026-07-14
 
 ### Changed (breaking)

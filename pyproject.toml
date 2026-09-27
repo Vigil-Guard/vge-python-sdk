@@ -119,17 +119,6 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["vigil"]
 
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
-markers = [
-    "unit: Unit tests (run in all environments)",
-    "component: Component tests (run in all environments)",
-    "contract: Contract tests (run in all environments, require mocking)",
-    "integration: Integration tests (require local API instance)",
-    "performance: Performance benchmarks (require local API instance)",
-]
-
 [tool.coverage.run]
 source = ["src/vigil"]
 branch = true
